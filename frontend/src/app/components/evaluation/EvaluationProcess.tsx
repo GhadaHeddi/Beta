@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Header } from "@/app/components/Header";
 import { EvaluationTabs } from "@/app/components/evaluation/EvaluationTabs";
-import { InformationsStep } from "@/app/components/evaluation/InformationsStep";
+import { InformationsStep, Document } from "@/app/components/evaluation/InformationsStep";
 import { ComparisonStep } from "@/app/components/evaluation/ComparisonStep";
 import { AnalysisStep } from "@/app/components/evaluation/AnalysisStep";
 import { SimulationStep } from "@/app/components/evaluation/SimulationStep";
@@ -9,18 +9,12 @@ import { FinalisationStep } from "@/app/components/evaluation/FinalisationStep";
 import { DocumentViewer } from "@/app/components/evaluation/DocumentViewer";
 import { AIAssistant } from "@/app/components/evaluation/AIAssistant";
 
-interface Document {
-  id: string;
-  name: string;
-  size: string;
-  date: string;
-  icon: string;
-}
-
 interface DocumentTab {
   id: string;
   name: string;
   icon: string;
+  url?: string;
+  type?: string;
 }
 
 interface EvaluationProcessProps {
@@ -65,6 +59,8 @@ export function EvaluationProcess({
       id: `doc-${doc.id}`,
       name: doc.name,
       icon: doc.icon,
+      url: doc.url,
+      type: doc.type,
     };
     setDocumentTabs([...documentTabs, newTab]);
     setActiveTab(`doc-${doc.id}`);
@@ -91,6 +87,8 @@ export function EvaluationProcess({
           <DocumentViewer
             documentName={docTab.name}
             documentIcon={docTab.icon}
+            fileUrl={docTab.url}
+            fileType={docTab.type}
           />
         );
       }

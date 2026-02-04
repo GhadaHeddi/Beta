@@ -32,15 +32,19 @@ import {
   User,
   Phone,
   Mail,
+  Image,
+  File,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useCallback, DragEvent } from "react";
 
-interface Document {
+export interface Document {
   id: string;
   name: string;
   size: string;
   date: string;
   icon: string;
+  url?: string;
+  type?: string;
 }
 
 interface InformationsStepProps {
@@ -56,37 +60,14 @@ export function InformationsStep({
   initialPropertyType = "",
   onOpenDocument,
 }: InformationsStepProps) {
-  const [documents, setDocuments] = useState<Document[]>([
-    {
-      id: "1",
-      name: "Plan cadastral",
-      size: "2.4 MB",
-      date: "20/01/2026",
-      icon: "🗺️",
-    },
-    {
-      id: "2",
-      name: "Plans techniques",
-      size: "1.8 MB",
-      date: "19/01/2026",
-      icon: "📐",
-    },
-    {
-      id: "3",
-      name: "Photos du bien",
-      size: "3.2 MB",
-      date: "18/01/2026",
-      icon: "📸",
-    },
-  ]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const [notes, setNotes] = useState("");
   const [notesCopied, setNotesCopied] = useState(false);
   const [swotSaved, setSwotSaved] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [showOwnerInfo, setShowOwnerInfo] = useState(false);
-  const [modalContent, setModalContent] =
-    useState<Document | null>(null);
 
   const [swotAnalysis, setSwotAnalysis] = useState({
     strengths: "",
@@ -105,6 +86,83 @@ export function InformationsStep({
     materials: "",
     geographicSector: "",
   });
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
+  const getFileIcon = (type: string): string => {
+    if (type.startsWith("image/")) return "🖼️";
+    if (type === "application/pdf") return "📄";
+    return "📁";
+  };
+
+  const processFile = useCallback((file: File) => {
+    // Vérifier la taille (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Le fichier est trop volumineux (max 10MB)");
+      return;
+    }
+
+    // Vérifier le type
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Type de fichier non supporté. Utilisez JPG, PNG, GIF, WebP ou PDF.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const url = e.target?.result as string;
+      const now = new Date();
+      const dateStr = now.toLocaleDateString("fr-FR");
+
+      const newDoc: Document = {
+        id: `doc-${Date.now()}`,
+        name: file.name,
+        size: formatFileSize(file.size),
+        date: dateStr,
+        icon: getFileIcon(file.type),
+        url: url,
+        type: file.type,
+      };
+
+      setDocuments((prev) => [...prev, newDoc]);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      Array.from(files).forEach(processFile);
+    }
+    // Reset input pour permettre de sélectionner le même fichier
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const files = e.dataTransfer.files;
+    if (files) {
+      Array.from(files).forEach(processFile);
+    }
+  };
 
   const handleDeleteDocument = (id: string) => {
     setDocuments(documents.filter((doc) => doc.id !== id));
@@ -142,15 +200,38 @@ export function InformationsStep({
             Documents
           </h3>
 
+          {/* Input fichier caché */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+            multiple
+            className="hidden"
+          />
+
           {/* Bouton Ajouter */}
-          <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-4">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-4"
+          >
             <Plus className="w-5 h-5" />
             Ajouter un fichier
           </button>
 
           {/* Zone drag & drop */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mb-4 hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer">
-            <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-lg p-6 text-center mb-4 transition-colors cursor-pointer ${
+              isDragOver
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-300 hover:border-blue-500 hover:bg-blue-50"
+            }`}
+          >
+            <Upload className={`w-8 h-8 mx-auto mb-2 ${isDragOver ? "text-blue-500" : "text-gray-400"}`} />
             <p className="text-sm text-gray-600">
               Glissez-déposez vos fichiers ici
             </p>
@@ -161,37 +242,47 @@ export function InformationsStep({
 
           {/* Liste des documents */}
           <div className="space-y-2">
-            {documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors group"
-              >
-                <FileText className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-900 truncate">
-                    {doc.name}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {doc.size} • {doc.date}
-                  </p>
+            {documents.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">
+                Aucun document ajouté
+              </p>
+            ) : (
+              documents.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors group"
+                >
+                  {doc.type?.startsWith("image/") ? (
+                    <Image className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <FileText className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900 truncate">
+                      {doc.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {doc.size} • {doc.date}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => onOpenDocument?.(doc)}
+                      className="px-2 py-1 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-1"
+                    >
+                      <Eye className="w-3 h-3" />
+                      Voir
+                    </button>
+                    <button
+                      onClick={() => handleDeleteDocument(doc.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600 hover:text-red-700" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => onOpenDocument?.(doc)}
-                    className="px-2 py-1 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-1"
-                  >
-                    <Eye className="w-3 h-3" />
-                    Voir
-                  </button>
-                  <button
-                    onClick={() => handleDeleteDocument(doc.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-600 hover:text-red-700" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
