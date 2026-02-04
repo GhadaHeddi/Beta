@@ -1,5 +1,7 @@
 # Dockerfile Backend FastAPI - ORYEM
-FROM python:3.11-slim
+FROM quay.io/fedora/python-311:latest
+
+USER root
 
 # Variables d'environnement
 ENV PYTHONUNBUFFERED=1 \
@@ -7,15 +9,25 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# Proxy pour le build (sera fourni via --build-arg)
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ENV http_proxy=$HTTP_PROXY
+ENV https_proxy=$HTTPS_PROXY
+
 # Répertoire de travail
 WORKDIR /app
 
 # Installation des dépendances système pour PostgreSQL et PostGIS
-RUN apt-get update && apt-get install -y \
+RUN dnf install -y \
     gcc \
-    postgresql-client \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+    postgresql \
+    libpq-devel \
+    && dnf clean all
+
+# Nettoyer les variables proxy après l'installation
+ENV http_proxy=
+ENV https_proxy=
 
 # Copie et installation des dépendances Python
 COPY requirements.txt .
