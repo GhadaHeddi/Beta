@@ -8,6 +8,8 @@ services:
       POSTGRES_USER: oryem_user
       POSTGRES_PASSWORD: oryem_password
       POSTGRES_DB: oryem_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
+      LANG: C.UTF-8
     ports:
       - "5432:5432"
     volumes:
@@ -28,9 +30,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://oryem_user:oryem_password@db:5432/oryem_db
+      DATABASE_URL: postgresql://oryem_user:oryem_password@db:5432/oryem_db?client_encoding=utf8
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-this-in-production}
       DEBUG: ${DEBUG:-True}
+      PYTHONIOENCODING: utf-8
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
     volumes:
       - ./backend:/app
       - ./uploads:/app/uploads
