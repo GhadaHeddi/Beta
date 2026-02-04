@@ -7,8 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base
 
-# Import des routeurs (à décommenter au fur et à mesure)
-# from app.routers import auth, users, projects, documents, comparables, dvf
+# Import des routeurs
+from app.routers import auth, projects
 
 app = FastAPI(
     title="ORYEM API",
@@ -33,7 +33,8 @@ async def startup_event():
     """Événement de démarrage de l'application"""
     print("🚀 Démarrage de l'application ORYEM...")
     # Création des tables (à remplacer par Alembic en production)
-    # Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    print("✅ Tables de base de données créées")
     print("✅ Application prête")
 
 
@@ -63,9 +64,8 @@ async def health_check():
 
 
 # Enregistrement des routeurs
-# app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-# app.include_router(users.router, prefix="/api/users", tags=["Users"])
-# app.include_router(projects.router, prefix="/api/projects", tags=["Projects"])
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(projects.router, prefix="/api/projects", tags=["Projects"])
 # app.include_router(documents.router, prefix="/api/documents", tags=["Documents"])
 # app.include_router(comparables.router, prefix="/api/comparables", tags=["Comparables"])
 # app.include_router(dvf.router, prefix="/api/dvf", tags=["DVF"])

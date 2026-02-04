@@ -9,11 +9,11 @@ import { MarketTrends } from "@/app/components/MarketTrends";
 
 export default function App() {
   const [view, setView] = useState<"home" | "evaluation" | "dashboard" | "market-trends">("home");
-  const [currentProject, setCurrentProject] = useState<{ title: string; address: string; propertyType: string } | null>(null);
+  const [currentProject, setCurrentProject] = useState<{ title: string; address: string; propertyType: string; projectId?: number } | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
-  const handleStartEvaluation = (title: string, address: string, propertyType: string) => {
-    setCurrentProject({ title, address, propertyType });
+  const handleStartEvaluation = (title: string, address: string, propertyType: string, projectId?: number) => {
+    setCurrentProject({ title, address, propertyType, projectId });
     setView("evaluation");
   };
 
@@ -37,10 +37,11 @@ export default function App() {
   };
 
   if (view === "evaluation" && currentProject) {
-    return <EvaluationProcess 
-      projectTitle={currentProject.title} 
+    return <EvaluationProcess
+      projectTitle={currentProject.title}
       projectAddress={currentProject.address}
       propertyType={currentProject.propertyType}
+      projectId={currentProject.projectId}
       onBack={handleBackToHome}
     />;
   }

@@ -6,6 +6,7 @@ interface SignUpModalProps {
   onClose: () => void;
   onSignUp: (name: string, email: string, password: string) => void;
   onSwitchToLogin?: () => void;
+  error?: string | null;
 }
 
 export function SignUpModal({
@@ -13,6 +14,7 @@ export function SignUpModal({
   onClose,
   onSignUp,
   onSwitchToLogin,
+  error,
 }: SignUpModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -361,6 +363,16 @@ export function SignUpModal({
                 </div>
               )}
           </div>
+
+          {/* API Error message */}
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2 text-red-700">
+                <AlertCircle className="w-4 h-4" />
+                <p className="text-sm">{error}</p>
+              </div>
+            </div>
+          )}
 
           {/* Bouton de soumission */}
           <button

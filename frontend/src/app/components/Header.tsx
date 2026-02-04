@@ -11,6 +11,7 @@ import { SignUpModal } from "@/app/components/SignUpModal";
 import { InboxDropdown } from "@/app/components/InboxDropdown";
 import { ProfileDropdown } from "@/app/components/ProfileDropdown";
 import { LogoutConfirmModal } from "@/app/components/LogoutConfirmModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface HeaderProps {
   onLogoClick?: () => void;
@@ -18,56 +19,72 @@ interface HeaderProps {
 }
 
 export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
-  const [isLoginModalOpen, setIsLoginModalOpen] =
-    useState(false);
-  const [isSignUpModalOpen, setIsSignUpModalOpen] =
-    useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Changed to true for demo
+  const { user, isAuthenticated, login, register, logout, error, clearError } = useAuth();
+
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isSignUpModalOpen, setIsSignUpModalOpen] = useState(false);
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isLogoutModalOpen, setIsLogoutModalOpen] =
-    useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(3);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  // User data (would come from auth context in real app)
-  const userData = {
-    name: "Sébastien BESSON",
-    email: "sebastien.besson@oryem.fr",
-    role: "Administrateur",
-    initials: "SB",
-    avatar: undefined, // or URL to avatar image
+  // Données utilisateur depuis le contexte
+  const userData = user ? {
+    name: `${user.first_name} ${user.last_name}`,
+    email: user.email,
+    role: "Utilisateur",
+    initials: `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase(),
+    avatar: user.avatar_url,
+  } : {
+    name: "Invité",
+    email: "",
+    role: "",
+    initials: "?",
+    avatar: undefined,
   };
 
-  const handleLogin = (username: string, password: string) => {
-    console.log("Connexion:", { username, password });
-    setIsLoginModalOpen(false);
-    setIsAuthenticated(true);
-    // Simulate receiving messages
-    setUnreadCount(3);
+  const handleLogin = async (email: string, password: string) => {
+    setAuthError(null);
+    try {
+      await login(email, password);
+      setIsLoginModalOpen(false);
+      setUnreadCount(3);
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : "Erreur de connexion");
+    }
   };
 
-  const handleSignUp = (
+  const handleSignUp = async (
     name: string,
     email: string,
     password: string,
   ) => {
-    console.log("Création de compte:", {
-      name,
-      email,
-      password,
-    });
-    setIsSignUpModalOpen(false);
-    setIsAuthenticated(true);
-    // Simulate receiving messages
-    setUnreadCount(3);
+    setAuthError(null);
+    try {
+      // Séparer le nom en prénom et nom
+      const nameParts = name.trim().split(' ');
+      const firstName = nameParts[0] || name;
+      const lastName = nameParts.slice(1).join(' ') || name;
+
+      await register(email, password, firstName, lastName);
+      setIsSignUpModalOpen(false);
+      setUnreadCount(3);
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : "Erreur d'inscription");
+    }
   };
 
   const handleSwitchToSignUp = () => {
+    setAuthError(null);
+    clearError();
     setIsLoginModalOpen(false);
     setIsSignUpModalOpen(true);
   };
 
   const handleSwitchToLogin = () => {
+    setAuthError(null);
+    clearError();
     setIsSignUpModalOpen(false);
     setIsLoginModalOpen(true);
   };
@@ -77,17 +94,28 @@ export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
     setIsLogoutModalOpen(true);
   };
 
-  const handleLogoutConfirm = () => {
+  const handleLogoutConfirm = async () => {
+    await logout();
     setIsLogoutModalOpen(false);
-    setIsAuthenticated(false);
     setUnreadCount(0);
-    console.log("Déconnecté");
   };
 
   const handleDashboardClick = () => {
     if (onDashboardClick) {
       onDashboardClick();
     }
+  };
+
+  const handleModalClose = () => {
+    setAuthError(null);
+    clearError();
+    setIsLoginModalOpen(false);
+  };
+
+  const handleSignUpModalClose = () => {
+    setAuthError(null);
+    clearError();
+    setIsSignUpModalOpen(false);
   };
 
   return (
@@ -223,16 +251,18 @@ export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
 
       <LoginModal
         isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
+        onClose={handleModalClose}
         onLogin={handleLogin}
         onSwitchToSignUp={handleSwitchToSignUp}
+        error={authError || error}
       />
 
       <SignUpModal
         isOpen={isSignUpModalOpen}
-        onClose={() => setIsSignUpModalOpen(false)}
+        onClose={handleSignUpModalClose}
         onSignUp={handleSignUp}
         onSwitchToLogin={handleSwitchToLogin}
+        error={authError || error}
       />
 
       <LogoutConfirmModal

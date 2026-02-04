@@ -3,7 +3,8 @@ Modèle DVFRecord - Données des transactions immobilières (Demandes de Valeurs
 Source: https://app.dvf.etalab.gouv.fr/
 """
 from sqlalchemy import Column, Integer, String, Float, Date, Index
-from geoalchemy2 import Geography
+# PostGIS désactivé temporairement - l'image quay.io PostgreSQL n'a pas PostGIS
+# from geoalchemy2 import Geography
 from app.database import Base
 
 
@@ -37,11 +38,11 @@ class DVFRecord(Base):
     surface_terrain = Column(Float, nullable=True)  # Surface du terrain en m²
     nombre_pieces_principales = Column(Integer, nullable=True)
 
-    # Géolocalisation (PostGIS)
+    # Géolocalisation (sans PostGIS - utilise lat/lon simples)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
-    # Colonne géographique pour les requêtes spatiales
-    geom = Column(Geography(geometry_type='POINT', srid=4326), nullable=True)
+    # Colonne géographique désactivée - nécessite PostGIS
+    # geom = Column(Geography(geometry_type='POINT', srid=4326), nullable=True)
 
     # Informations cadastrales
     code_type_local = Column(String, nullable=True)
@@ -51,8 +52,8 @@ class DVFRecord(Base):
         return f"<DVFRecord(id={self.id}, commune='{self.commune}', valeur={self.valeur_fonciere}€, date={self.mutation_date})>"
 
 
-# Index géographique pour optimiser les recherches spatiales
-Index('idx_dvf_geom', DVFRecord.geom, postgresql_using='gist')
+# Index géographique désactivé - nécessite PostGIS
+# Index('idx_dvf_geom', DVFRecord.geom, postgresql_using='gist')
 Index('idx_dvf_date', DVFRecord.mutation_date)
 Index('idx_dvf_type', DVFRecord.type_local)
 Index('idx_dvf_commune', DVFRecord.commune)

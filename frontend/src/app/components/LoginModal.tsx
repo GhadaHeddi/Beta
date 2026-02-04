@@ -6,9 +6,10 @@ interface LoginModalProps {
   onClose: () => void;
   onLogin: (username: string, password: string) => void;
   onSwitchToSignUp?: () => void;
+  error?: string | null;
 }
 
-export function LoginModal({ isOpen, onClose, onLogin, onSwitchToSignUp }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLogin, onSwitchToSignUp, error }: LoginModalProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -152,6 +153,13 @@ export function LoginModal({ isOpen, onClose, onLogin, onSwitchToSignUp }: Login
                 />
               </div>
             </div>
+
+            {/* Error message */}
+            {error && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            )}
 
             {/* Actions */}
             <button
