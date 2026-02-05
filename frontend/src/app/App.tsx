@@ -9,7 +9,7 @@ import { MarketTrends } from "@/app/components/MarketTrends";
 import type { Project } from "@/types/project";
 
 interface CurrentProject {
-  id: number | null;
+  id: number;
   title: string;
   address: string;
   propertyType: string;
@@ -21,8 +21,8 @@ export default function App() {
   const [currentProject, setCurrentProject] = useState<CurrentProject | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
-  const handleStartEvaluation = (title: string, address: string, propertyType: string) => {
-    setCurrentProject({ id: null, title, address, propertyType, currentStep: 1 });
+  const handleStartEvaluation = (id: number, title: string, address: string, propertyType: string) => {
+    setCurrentProject({ id, title, address, propertyType, currentStep: 1 });
     setView("evaluation");
   };
 
@@ -51,7 +51,7 @@ export default function App() {
     setView("home");
   };
 
-  const handleViewMarketTrends = (city: string) => { NoePI-Esisar
+  const handleViewMarketTrends = (city: string) => {
     setSelectedCity(city);
     setView("market-trends");
   };
@@ -84,14 +84,14 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header onLogoClick={handleBackToHome} onDashboardClick={handleOpenDashboard} />
-      
+
       <div className="flex-1 flex overflow-hidden">
         {/* Zone principale (78%) */}
         <div className="flex-1 flex flex-col overflow-auto" style={{ width: '78%' }}>
           <div className="h-[40vh]">
             <ProjectCreation onStartEvaluation={handleStartEvaluation} />
           </div>
-          
+
           <div className="flex-1 overflow-auto">
             <RecentProjects onProjectClick={handleOpenProject} />
           </div>

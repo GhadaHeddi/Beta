@@ -4,7 +4,7 @@ import { useState } from "react";
 interface CreateValueModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (title: string, address: string, propertyType: string) => void;
+  onCreate: (id: number, title: string, address: string, propertyType: string) => void;
   isLoading?: boolean;
   error?: string | null;
 }
@@ -16,10 +16,10 @@ export function CreateValueModal({ isOpen, onClose, onCreate, isLoading = false,
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim() && address.trim() && propertyType && !isLoading) {
-      onCreate(title, address, propertyType);
+      onCreate(0, title, address, propertyType); // ProjectCreation gère l'appel API
     }
   };
 
@@ -42,7 +42,7 @@ export function CreateValueModal({ isOpen, onClose, onCreate, isLoading = false,
         style={{ backgroundColor: 'rgba(0, 0, 0, 0.55)' }}
         onClick={handleClose}
       />
-      
+
       {/* Modal */}
       <div className="relative bg-white rounded-xl shadow-[0_25px_70px_rgba(0,0,0,0.4)] w-full max-w-md z-10">
         <div className="p-6">

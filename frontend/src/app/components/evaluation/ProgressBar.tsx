@@ -2,6 +2,7 @@ import { CheckCircle2 } from "lucide-react";
 
 interface ProgressBarProps {
   activeTab: string;
+  stepsCompletion?: Record<string, boolean>;
 }
 
 interface Step {
@@ -11,7 +12,7 @@ interface Step {
   percentage: number;
 }
 
-export function ProgressBar({ activeTab }: ProgressBarProps) {
+export function ProgressBar({ activeTab, stepsCompletion }: ProgressBarProps) {
   const steps: Step[] = [
     {
       id: "informations",
@@ -73,7 +74,8 @@ export function ProgressBar({ activeTab }: ProgressBarProps) {
           <div className="relative flex justify-between">
             {steps.map((step, index) => {
               const isActive = index === currentStepIndex;
-              const isCompleted = index < currentStepIndex;
+              // ✓ apparaît uniquement si l'étape a été sauvegardée (pas basé sur la position)
+              const isCompleted = stepsCompletion?.[step.id] ?? false;
 
               return (
                 <div

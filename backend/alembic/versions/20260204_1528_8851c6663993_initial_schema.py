@@ -7,7 +7,7 @@ Create Date: 2026-02-04 15:28:04.617764
 """
 from alembic import op
 import sqlalchemy as sa
-import geoalchemy2
+# import geoalchemy2  # PostGIS désactivé
 
 # revision identifiers, used by Alembic.
 revision = '8851c6663993'
@@ -163,7 +163,7 @@ def upgrade() -> None:
         sa.Column('nombre_pieces_principales', sa.Integer(), nullable=True),
         sa.Column('latitude', sa.Float(), nullable=True),
         sa.Column('longitude', sa.Float(), nullable=True),
-        sa.Column('geom', geoalchemy2.types.Geography(geometry_type='POINT', srid=4326, from_text='ST_GeogFromText', name='geography'), nullable=True),
+        # sa.Column('geom', ...) - PostGIS désactivé
         sa.Column('code_type_local', sa.String(), nullable=True),
         sa.Column('numero_disposition', sa.String(), nullable=True),
         sa.PrimaryKeyConstraint('id')
