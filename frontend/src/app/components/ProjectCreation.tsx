@@ -1,6 +1,8 @@
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { CreateValueModal } from "@/app/components/CreateValueModal";
+import { createProject } from "@/services/projectService";
+import type { PropertyType } from "@/types/project";
 
 interface ProjectCreationProps {
   onStartEvaluation: (
@@ -14,20 +16,37 @@ export function ProjectCreation({
   onStartEvaluation,
 }: ProjectCreationProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleCreate = (
+  const handleCreate = async (
     title: string,
     address: string,
     propertyType: string,
   ) => {
-    console.log("Nouvel avis de valeur créé:", {
-      title,
-      address,
-      propertyType,
-    });
-    // Fermer le modal et démarrer le processus d'évaluation
-    setIsModalOpen(false);
-    onStartEvaluation(title, address, propertyType);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Appel API pour créer le projet en BDD
+      const newProject = await createProject({
+        title,
+        address,
+        property_type: propertyType as PropertyType,
+      });
+
+      console.log("Projet créé en BDD:", newProject);
+
+      // Fermer le modal et démarrer le processus d'évaluation
+      setIsModalOpen(false);
+      onStartEvaluation(title, address, propertyType);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erreur lors de la création";
+      setError(message);
+      console.error("Erreur création projet:", message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -57,6 +76,8 @@ export function ProjectCreation({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onCreate={handleCreate}
+        isLoading={isLoading}
+        error={error}
       />
     </>
   );

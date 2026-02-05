@@ -23,21 +23,37 @@ interface DocumentTab {
   icon: string;
 }
 
+// Mapping des numéros d'étape vers les identifiants d'onglets
+const stepToTab: Record<number, string> = {
+  1: "informations",
+  2: "comparison",
+  3: "Analysis",
+  4: "Simulation",
+  5: "finalisation",
+};
+
 interface EvaluationProcessProps {
+  projectId: number | null;
   projectTitle: string;
   projectAddress: string;
   propertyType: string;
+  initialStep?: number;
   onBack?: () => void;
+  onDashboardClick?: () => void;
 }
 
 export function EvaluationProcess({
+  projectId,
   projectTitle,
   projectAddress,
   propertyType,
+  initialStep = 1,
   onBack,
+  onDashboardClick,
 }: EvaluationProcessProps) {
-  const [activeTab, setActiveTab] =
-    useState<string>("informations");
+  const [activeTab, setActiveTab] = useState<string>(
+    stepToTab[initialStep] || "informations"
+  );
   const [documentTabs, setDocumentTabs] = useState<
     DocumentTab[]
   >([]);
@@ -131,7 +147,7 @@ export function EvaluationProcess({
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* En-tête fixe */}
       <div className="sticky top-0 z-50">
-        <Header />
+        <Header onLogoClick={onBack} onDashboardClick={onDashboardClick} />
       </div>
 
       {/* Barre d'onglets avec barre de progression intégrée */}

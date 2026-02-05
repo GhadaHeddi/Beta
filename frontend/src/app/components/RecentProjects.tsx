@@ -6,158 +6,125 @@ import {
   Store,
   TreePine,
   Filter,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
+import { useRecentProjects } from "@/hooks/useProjects";
+import type { Project, ProjectStatus, PropertyType } from "@/types/project";
 
-interface Project {
-  id: string;
-  name: string;
-  type:
-    | "bureaux"
-    | "local_commercial"
-    | "local_activite"
-    | "terrain";
-  address: string;
-  surface: string;
-  nomOccupant: String;
-  anneeconstruction: number;
-  siret: String;
-  rent?: string; // Loyer en €/m²
-  salePrice?: string; // Prix de vente
-  status: "En cours" | "Terminé" | "Brouillon";
-  progress: number; // Pourcentage d'avancement
+// Mapping des types de propriété backend vers l'affichage
+const propertyTypeConfig: Record<PropertyType, { icon: typeof Building2; label: string; emoji: string }> = {
+  office: { icon: Building2, label: "Bureaux", emoji: "\u{1F3E2}" },
+  warehouse: { icon: Factory, label: "Entrepot", emoji: "\u{1F3ED}" },
+  retail: { icon: Store, label: "Commerce", emoji: "\u{1F3EA}" },
+  industrial: { icon: Factory, label: "Locaux d'activite", emoji: "\u{1F3ED}" },
+  land: { icon: TreePine, label: "Terrain", emoji: "\u{1F333}" },
+  mixed: { icon: Building2, label: "Mixte", emoji: "\u{1F3D7}" },
+};
+
+// Mapping des statuts backend vers l'affichage
+const statusConfig: Record<ProjectStatus, { label: string; color: string }> = {
+  draft: { label: "Brouillon", color: "bg-gray-100 text-gray-800" },
+  in_progress: { label: "En cours", color: "bg-blue-100 text-blue-800" },
+  completed: { label: "Termine", color: "bg-green-100 text-green-800" },
+  archived: { label: "Archive", color: "bg-gray-100 text-gray-800" },
+};
+
+// Calculer la progression en pourcentage (5 etapes max)
+function calculateProgress(currentStep: number): number {
+  return Math.round((currentStep / 5) * 100);
 }
 
-const mockProjects: Project[] = [
-  {
-    id: "1",
-    name: "Bureaux Charles de Gaulle",
-    type: "bureaux",
-    address: "15 Avenue Charles de Gaulle, 92200 Neuilly",
-    surface: "500",
-    nomOccupant: "Michel François",
-    siret: "351745724",
-    anneeconstruction: 2025,
-    rent: "180",
-    salePrice: "7000",
-    status: "Terminé",
-    progress: 100,
-  },
-  {
-    id: "2",
-    name: "Commerce Rivoli",
-    type: "local_commercial",
-    address: "28 Rue de Rivoli, 75001 Paris",
-    surface: "450",
-    nomOccupant: "Frank Denis",
-    siret: "351745724",
-    anneeconstruction: 1990,
-    rent: "350",
-    salePrice: "6500",
-    status: "Brouillon",
-    progress: 0,
-  },
-  {
-    id: "3",
-    name: "Entrepôt Montreuil",
-    type: "local_activite",
-    address: "42 Zone Industrielle Nord, 93100 Montreuil",
-    surface: "500",
-    nomOccupant: "Michel François",
-    siret: "351745724",
-    anneeconstruction: 2025,
-    rent: "85",
-    salePrice: "5500",
-    status: "En cours",
-    progress: 65,
-  },
-  {
-    id: "4",
-    name: "Terrain Haussmann",
-    type: "terrain",
-    address: "5 Boulevard Haussmann, 75009 Paris",
-    surface: "200",
-    nomOccupant: "Frank Denis",
-    siret: "351745724",
-    anneeconstruction: 2017,
-    salePrice: "5700",
-    status: "En cours",
-    progress: 58,
-  },
-  {
-    id: "5",
-    name: "Local Champs-Élysées",
-    type: "local_activite",
-    address: "33 Avenue des Champs-Élysées, 75008 Paris",
-    surface: "800",
-    nomOccupant: "Michel François",
-    siret: "351745724",
-    anneeconstruction: 2015,
-    rent: "220",
-    salePrice: "4800",
-    status: "En cours",
-    progress: 15,
-  },
-  {
-    id: "6",
-    name: "Entrepôt Longjumeau",
-    type: "local_activite",
-    address: "12 Route Nationale 7, 91160 Longjumeau",
-    surface: "600",
-    nomOccupant: "Hugo Despommes",
-    siret: "351745724",
-    anneeconstruction: 2022,
-    rent: "95",
-    salePrice: "7500",
-    status: "En cours",
-    progress: 78,
-  },
-];
+// Obtenir la couleur du badge de statut en fonction de la progression
+function getProgressColor(progress: number): string {
+  if (progress === 100) return "bg-green-100 text-green-800";
+  if (progress === 0) return "bg-gray-100 text-gray-800";
+  return "bg-blue-100 text-blue-800";
+}
 
-const statusColors = {
-  "En cours": "bg-blue-100 text-blue-800",
-  Terminé: "bg-green-100 text-green-800",
-  Brouillon: "bg-gray-100 text-gray-800",
-};
+interface RecentProjectsProps {
+  onProjectClick?: (project: Project) => void;
+}
 
-const tauxcompletion = 48;
-
-const completionstatus = "En cours";
-
-const propertyTypeConfig = {
-  bureaux: { icon: Building2, label: "Bureaux", emoji: "🏢" },
-  local_activite: {
-    icon: Factory,
-    label: "Locaux d'activité",
-    emoji: "🏭",
-  },
-  local_commercial: {
-    icon: Store,
-    label: "Local commercial",
-    emoji: "🏪",
-  },
-  terrain: { icon: TreePine, label: "Terrain", emoji: "🌳" },
-};
-
-export function RecentProjects() {
+export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
+  const { projects, loading, error, refetch } = useRecentProjects();
   const [progressFilter, setProgressFilter] = useState<"all" | "0-50" | "50-75" | "75-99" | "completed">("all");
 
   // Filtrer les projets en fonction du filtre de progression
-  const filteredProjects = mockProjects.filter((project) => {
+  const filteredProjects = projects.filter((project) => {
+    const progress = calculateProgress(project.current_step);
     if (progressFilter === "all") return true;
-    if (progressFilter === "0-50") return project.progress >= 0 && project.progress <= 50;
-    if (progressFilter === "50-75") return project.progress > 50 && project.progress <= 75;
-    if (progressFilter === "75-99") return project.progress > 75 && project.progress < 100;
-    if (progressFilter === "completed") return project.progress === 100;
+    if (progressFilter === "0-50") return progress >= 0 && progress <= 50;
+    if (progressFilter === "50-75") return progress > 50 && progress <= 75;
+    if (progressFilter === "75-99") return progress > 75 && progress < 100;
+    if (progressFilter === "completed") return progress === 100;
     return true;
   });
+
+  // Calculer le taux de completion moyen
+  const averageCompletion = projects.length > 0
+    ? Math.round(projects.reduce((acc, p) => acc + calculateProgress(p.current_step), 0) / projects.length)
+    : 0;
+
+  const completionStatus = averageCompletion === 100 ? "completed" : averageCompletion === 0 ? "draft" : "in_progress";
+
+  // Affichage du chargement (skeleton)
+  if (loading) {
+    return (
+      <div className="bg-white px-8 py-8">
+        <div className="w-full">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl text-blue-900">
+              Mes avis de valeur recents
+            </h2>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 h-[50vh] flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4 text-gray-500">
+              <Loader2 className="w-8 h-8 animate-spin" />
+              <span>Chargement des projets...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Affichage de l'erreur
+  if (error) {
+    return (
+      <div className="bg-white px-8 py-8">
+        <div className="w-full">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl text-blue-900">
+              Mes avis de valeur recents
+            </h2>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 h-[50vh] flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4 text-red-600">
+              <AlertCircle className="w-8 h-8" />
+              <span>{error}</span>
+              <button
+                onClick={refetch}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Reessayer
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white px-8 py-8">
       <div className="w-full">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl text-blue-900">
-            Mes avis de valeur récents
+            Mes avis de valeur recents
           </h2>
 
           <div className="flex items-center gap-4">
@@ -212,17 +179,17 @@ export function RecentProjects() {
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                Terminés
+                Termines
               </button>
             </div>
 
-            {/* Badge de complétion totale */}
+            {/* Badge de completion totale */}
             <span
               className={`inline-block px-3 py-1.5 rounded-full text-sm whitespace-nowrap ${
-                statusColors[completionstatus]
+                statusConfig[completionStatus].color
               }`}
             >
-              Complétion totale : {tauxcompletion}%
+              Completion totale : {averageCompletion}%
             </span>
           </div>
         </div>
@@ -239,29 +206,27 @@ export function RecentProjects() {
                     Statut
                   </th>
                   <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    Titre 
+                    Titre
                   </th>
                   <th className="text-center px-10 py-4 text-sm text-gray-700 whitespace-nowrap">
                     Adresse
                   </th>
                   <th className="text-center px-8 py-4 text-sm text-gray-700 whitespace-nowrap">
                     Occupant actuel
-                    <br />
-                    (nom et Siret)
                   </th>
                   <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    Surface (m²)
+                    Surface (m2)
                   </th>
                   <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    Loyer de marché <br />
-                    (€/m²/an)
+                    Loyer de marche <br />
+                    (EUR/m2/an)
                   </th>
                   <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    Prix vente estimé <br />
-                    (€/m²)
+                    Prix vente estime <br />
+                    (EUR/m2)
                   </th>
                   <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    année <br />
+                    Annee <br />
                     de construction
                   </th>
                   <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
@@ -270,84 +235,95 @@ export function RecentProjects() {
                 </tr>
               </thead>
               <tbody>
-                {filteredProjects.map((project, index) => {
-                  const typeConfig =
-                    propertyTypeConfig[project.type];
+                {filteredProjects.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
+                      Aucun projet trouve
+                    </td>
+                  </tr>
+                ) : (
+                  filteredProjects.map((project, index) => {
+                    const typeConfig = propertyTypeConfig[project.property_type];
+                    const progress = calculateProgress(project.current_step);
+                    const progressColor = getProgressColor(progress);
 
-                  return (
-                    <tr
-                      key={project.id}
-                      className={`border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors ${
-                        index % 2 === 1
-                          ? "bg-gray-50"
-                          : "bg-white"
-                      }`}
-                    >
-                      <td className="px-6 py-4 text-blue-900 whitespace-nowrap">
-                        {project.name}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-block px-3 py-1 rounded-full text-sm whitespace-nowrap ${
-                            statusColors[project.status]
-                          }`}
-                        >
-                          {project.progress}%
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <span className="text-lg">
-                            {typeConfig.emoji}
+                    const handleRowClick = () => {
+                      if (onProjectClick) {
+                        onProjectClick(project);
+                      }
+                    };
+
+                    return (
+                      <tr
+                        key={project.id}
+                        onClick={handleRowClick}
+                        className={`border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors ${
+                          index % 2 === 1
+                            ? "bg-gray-50"
+                            : "bg-white"
+                        }`}
+                      >
+                        <td className="px-6 py-4 text-blue-900 whitespace-nowrap">
+                          {project.user.first_name} {project.user.last_name}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-sm whitespace-nowrap ${progressColor}`}
+                          >
+                            {progress}%
                           </span>
-                          <span>{project.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-gray-700">
-                        {project.address}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700">
-                        {project.nomOccupant}
-                        <br />
-                        {project.siret}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700 text-center whitespace-nowrap">
-                        {project.surface}
-                      </td>
-                      <td className="px-6 py-4 text-right text-gray-700 whitespace-nowrap">
-                        {project.rent ? (
-                          `${project.rent} €/m²`
-                        ) : (
-                          <span className="text-gray-400">
-                            -
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right text-blue-900 font-semibold whitespace-nowrap">
-                        {project.salePrice ? (
-                          `${project.salePrice} €`
-                        ) : (
-                          <span className="text-gray-400 font-normal">
-                            -
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 text-center py-4 text-gray-700 whitespace-nowrap">
-                        {project.anneeconstruction}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                            <Edit2 className="w-4 h-4 text-gray-600" />
-                          </button>
-                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                            <Share2 className="w-4 h-4 text-gray-600" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2 text-gray-700">
+                            <span className="text-lg">
+                              {typeConfig.emoji}
+                            </span>
+                            <span>{project.title}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-gray-700">
+                          {project.address}
+                        </td>
+                        <td className="px-6 py-4 text-gray-700">
+                          {project.property_info?.occupant_name || "-"}
+                        </td>
+                        <td className="px-6 py-4 text-gray-700 text-center whitespace-nowrap">
+                          {project.property_info?.total_surface ?? "-"}
+                        </td>
+                        <td className="px-6 py-4 text-right text-gray-700 whitespace-nowrap">
+                          <span className="text-gray-400">-</span>
+                        </td>
+                        <td className="px-6 py-4 text-right text-blue-900 font-semibold whitespace-nowrap">
+                          <span className="text-gray-400 font-normal">-</span>
+                        </td>
+                        <td className="px-6 text-center py-4 text-gray-700 whitespace-nowrap">
+                          {project.property_info?.construction_year ?? "-"}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRowClick();
+                              }}
+                              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="Modifier le projet"
+                            >
+                              <Edit2 className="w-4 h-4 text-gray-600" />
+                            </button>
+                            <button
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="Partager le projet"
+                            >
+                              <Share2 className="w-4 h-4 text-gray-600" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

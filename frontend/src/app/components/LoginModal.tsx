@@ -1,35 +1,32 @@
-import { X, Building2 } from "lucide-react";
+import { Building2, AlertCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 interface LoginModalProps {
   isOpen: boolean;
-  onClose: () => void;
-  onLogin: (username: string, password: string) => void;
-  onSwitchToSignUp?: () => void;
+  onLogin: (email: string, password: string) => Promise<void>;
+  error?: string | null;
 }
 
-export function LoginModal({ isOpen, onClose, onLogin, onSwitchToSignUp }: LoginModalProps) {
-  const [username, setUsername] = useState("");
+export function LoginModal({ isOpen, onLogin, error }: LoginModalProps) {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim() && password.trim()) {
-      onLogin(username, password);
-      setUsername("");
-      setPassword("");
+    if (email.trim() && password.trim()) {
+      setIsLoading(true);
+      await onLogin(email, password);
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Fond rouge avec dégradé et formes organiques */}
-      <div 
-        className="absolute inset-0 bg-gradient-to-br from-[#8B1818] to-[#D32F2F]"
-        onClick={onClose}
-      >
+      <div className="absolute inset-0 bg-gradient-to-br from-[#8B1818] to-[#D32F2F]">
         {/* Formes organiques courbes en arrière-plan */}
         <div className="absolute inset-0 overflow-hidden">
           {/* Forme organique 1 - en haut à gauche */}
@@ -92,14 +89,6 @@ export function LoginModal({ isOpen, onClose, onLogin, onSwitchToSignUp }: Login
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-24 -translate-x-24"></div>
           </div>
           
-          {/* Bouton fermer */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-1 hover:bg-white/20 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-white" />
-          </button>
-
           {/* Logo et titre */}
           <div className="relative flex flex-col items-center text-center">
             <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-4 shadow-lg">
@@ -121,19 +110,28 @@ export function LoginModal({ isOpen, onClose, onLogin, onSwitchToSignUp }: Login
           </h3>
           
           <form onSubmit={handleSubmit}>
+            {/* Error message */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
-                <label htmlFor="username" className="block text-sm text-gray-700 mb-2">
-                  Nom d'utilisateur
+                <label htmlFor="email" className="block text-sm text-gray-700 mb-2">
+                  Email
                 </label>
                 <input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Votre nom d'utilisateur"
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Votre adresse email"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   required
+                  disabled={isLoading}
                 />
               </div>
 
@@ -149,6 +147,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onSwitchToSignUp }: Login
                   placeholder="Votre mot de passe"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -156,9 +155,17 @@ export function LoginModal({ isOpen, onClose, onLogin, onSwitchToSignUp }: Login
             {/* Actions */}
             <button
               type="submit"
-              className="w-full mt-6 px-4 py-3 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors shadow-md"
+              disabled={isLoading}
+              className="w-full mt-6 px-4 py-3 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Se connecter
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Connexion...
+                </>
+              ) : (
+                "Se connecter"
+              )}
             </button>
 
             <div className="mt-4 text-center">
@@ -166,21 +173,6 @@ export function LoginModal({ isOpen, onClose, onLogin, onSwitchToSignUp }: Login
                 Mot de passe oublié ?
               </a>
             </div>
-
-            {onSwitchToSignUp && (
-              <div className="mt-4 text-center">
-                <p className="text-sm text-gray-600">
-                  Pas encore de compte ?{" "}
-                  <button
-                    type="button"
-                    onClick={onSwitchToSignUp}
-                    className="text-red-700 hover:text-red-800 font-medium transition-colors"
-                  >
-                    S'inscrire
-                  </button>
-                </p>
-              </div>
-            )}
           </form>
         </div>
       </div>

@@ -3,11 +3,17 @@ FROM quay.io/fedora/python-311:latest
 
 USER root
 
+ARG PROXY
+
 # Variables d'environnement
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV HTTP_PROXY=${PROXY}
+ENV HTTPS_PROXY=${PROXY}
+ENV http_proxy=${PROXY}
+ENV https_proxy=${PROXY}
 
 # Proxy pour le build (sera fourni via --build-arg)
 ARG HTTP_PROXY
@@ -31,7 +37,7 @@ ENV https_proxy=
 
 # Copie et installation des dépendances Python
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --proxy ${HTTP_PROXY} --no-cache-dir -r requirements.txt
 
 # Copie du code source
 COPY . .
@@ -39,8 +45,14 @@ COPY . .
 # Création du dossier uploads
 RUN mkdir -p uploads
 
+# Copie et permissions du script de démarrage
+COPY scripts/start.sh /start.sh
+RUN chmod +x /start.sh
+
 # Port exposé
 EXPOSE 8000
 
-# Commande de démarrage
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Commande de démarrage (migrations + serveur)
+CMD ["/start.sh"]
+
+
