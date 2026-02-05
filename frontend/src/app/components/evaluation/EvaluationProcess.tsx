@@ -23,7 +23,26 @@ interface DocumentTab {
   icon: string;
 }
 
+interface FormData {
+  title: string;
+  address: string;
+  ownerName: string;
+  occupantName: string;
+  propertyType: string;
+  year: string;
+  materials: string;
+  geographicSector: string;
+}
+
+interface SwotAnalysis {
+  strengths: string;
+  weaknesses: string;
+  opportunities: string;
+  threats: string;
+}
+
 interface EvaluationProcessProps {
+  projectId: number;
   projectTitle: string;
   projectAddress: string;
   propertyType: string;
@@ -31,6 +50,7 @@ interface EvaluationProcessProps {
 }
 
 export function EvaluationProcess({
+  projectId,
   projectTitle,
   projectAddress,
   propertyType,
@@ -41,6 +61,35 @@ export function EvaluationProcess({
   const [documentTabs, setDocumentTabs] = useState<
     DocumentTab[]
   >([]);
+
+  // État des données du formulaire Informations (persisté lors de la navigation)
+  const [informationsFormData, setInformationsFormData] = useState<FormData>({
+    title: projectTitle,
+    address: projectAddress,
+    ownerName: "",
+    occupantName: "",
+    propertyType: propertyType,
+    year: "",
+    materials: "",
+    geographicSector: "",
+  });
+  const [informationsNotes, setInformationsNotes] = useState("");
+  const [informationsSwot, setInformationsSwot] = useState<SwotAnalysis>({
+    strengths: "",
+    weaknesses: "",
+    opportunities: "",
+    threats: "",
+  });
+  const [informationsDocuments, setInformationsDocuments] = useState<Document[]>([]);
+
+  // Suivi de la complétion des étapes (✓ affiché uniquement si sauvegardé)
+  const [stepsCompletion, setStepsCompletion] = useState<Record<string, boolean>>({
+    informations: false,
+    comparison: false,
+    Analysis: false,
+    Simulation: false,
+    finalisation: false,
+  });
 
   const handleOpenDocument = (doc: Document) => {
     // Vérifier si le document est déjà ouvert
@@ -101,9 +150,16 @@ export function EvaluationProcess({
       case "informations":
         return (
           <InformationsStep
-            initialTitle={projectTitle}
-            initialAddress={projectAddress}
-            initialPropertyType={propertyType}
+            projectId={projectId}
+            formData={informationsFormData}
+            notes={informationsNotes}
+            swotAnalysis={informationsSwot}
+            documents={informationsDocuments}
+            onFormDataChange={setInformationsFormData}
+            onNotesChange={setInformationsNotes}
+            onSwotChange={setInformationsSwot}
+            onDocumentsChange={setInformationsDocuments}
+            onStepComplete={() => setStepsCompletion(prev => ({ ...prev, informations: true }))}
             onOpenDocument={handleOpenDocument}
           />
         );
@@ -118,9 +174,16 @@ export function EvaluationProcess({
       default:
         return (
           <InformationsStep
-            initialTitle={projectTitle}
-            initialAddress={projectAddress}
-            initialPropertyType={propertyType}
+            projectId={projectId}
+            formData={informationsFormData}
+            notes={informationsNotes}
+            swotAnalysis={informationsSwot}
+            documents={informationsDocuments}
+            onFormDataChange={setInformationsFormData}
+            onNotesChange={setInformationsNotes}
+            onSwotChange={setInformationsSwot}
+            onDocumentsChange={setInformationsDocuments}
+            onStepComplete={() => setStepsCompletion(prev => ({ ...prev, informations: true }))}
             onOpenDocument={handleOpenDocument}
           />
         );
@@ -143,6 +206,7 @@ export function EvaluationProcess({
           projectAddress={projectAddress}
           documentTabs={documentTabs}
           onCloseDocumentTab={handleCloseDocumentTab}
+          stepsCompletion={stepsCompletion}
         />
       </div>
 

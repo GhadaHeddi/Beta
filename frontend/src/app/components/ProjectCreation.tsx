@@ -4,6 +4,7 @@ import { CreateValueModal } from "@/app/components/CreateValueModal";
 
 interface ProjectCreationProps {
   onStartEvaluation: (
+    id: number,
     title: string,
     address: string,
     propertyType: string,
@@ -16,18 +17,20 @@ export function ProjectCreation({
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleCreate = (
+    id: number,
     title: string,
     address: string,
     propertyType: string,
   ) => {
     console.log("Nouvel avis de valeur créé:", {
+      id,
       title,
       address,
       propertyType,
     });
     // Fermer le modal et démarrer le processus d'évaluation
     setIsModalOpen(false);
-    onStartEvaluation(title, address, propertyType);
+    onStartEvaluation(id, title, address, propertyType);
   };
 
   return (

@@ -1,27 +1,48 @@
 import { X } from "lucide-react";
 import { useState } from "react";
+import { createProject } from "@/services/projectService";
 
 interface CreateValueModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (title: string, address: string, propertyType: string) => void;
+  onCreate: (id: number, title: string, address: string, propertyType: string) => void;
 }
 
 export function CreateValueModal({ isOpen, onClose, onCreate }: CreateValueModalProps) {
   const [title, setTitle] = useState("");
   const [address, setAddress] = useState("");
   const [propertyType, setPropertyType] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim() && address.trim() && propertyType) {
-      onCreate(title, address, propertyType);
-      setTitle("");
-      setAddress("");
-      setPropertyType("");
-      onClose();
+      setIsCreating(true);
+      setError(null);
+      try {
+        // Créer le projet dans la base de données
+        const project = await createProject({
+          title,
+          address,
+          property_type: propertyType
+        });
+
+        // Réinitialiser le formulaire
+        setTitle("");
+        setAddress("");
+        setPropertyType("");
+        onClose();
+
+        // Notifier le parent avec l'ID du projet
+        onCreate(project.id, title, address, propertyType);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Erreur lors de la création du projet");
+      } finally {
+        setIsCreating(false);
+      }
     }
   };
 
@@ -105,25 +126,33 @@ export function CreateValueModal({ isOpen, onClose, onCreate }: CreateValueModal
               </div>
             </div>
 
+            {/* Message d'erreur */}
+            {error && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="flex items-center gap-3 mt-6">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={isCreating}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 Annuler
               </button>
               <button
                 type="submit"
-                disabled={!isFormValid}
+                disabled={!isFormValid || isCreating}
                 className={`flex-1 px-4 py-2.5 text-white rounded-lg transition-colors ${
-                  isFormValid 
-                    ? 'bg-green-600 hover:bg-green-700' 
+                  isFormValid && !isCreating
+                    ? 'bg-green-600 hover:bg-green-700'
                     : 'bg-gray-300 cursor-not-allowed'
                 }`}
               >
-                Créer le projet
+                {isCreating ? "Création..." : "Créer le projet"}
               </button>
             </div>
           </form>

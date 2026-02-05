@@ -34,6 +34,7 @@ import {
   Mail,
 } from "lucide-react";
 import { useState } from "react";
+import { savePropertyInfo } from "@/services/projectService";
 
 interface Document {
   id: string;
@@ -43,49 +44,63 @@ interface Document {
   icon: string;
 }
 
+interface FormData {
+  title: string;
+  address: string;
+  ownerName: string;
+  occupantName: string;
+  propertyType: string;
+  year: string;
+  materials: string;
+  geographicSector: string;
+}
+
+interface SwotAnalysis {
+  strengths: string;
+  weaknesses: string;
+  opportunities: string;
+  threats: string;
+}
+
 interface InformationsStepProps {
-  initialTitle?: string;
-  initialAddress?: string;
-  initialPropertyType?: string;
+  // ID du projet pour la sauvegarde API
+  projectId: number;
+  // Données contrôlées par le parent (persistées lors de la navigation)
+  formData: FormData;
+  notes: string;
+  swotAnalysis: SwotAnalysis;
+  documents: Document[];
+  // Callbacks pour mettre à jour le parent
+  onFormDataChange: (data: FormData) => void;
+  onNotesChange: (notes: string) => void;
+  onSwotChange: (swot: SwotAnalysis) => void;
+  onDocumentsChange: (docs: Document[]) => void;
+  onStepComplete: () => void;
   onOpenDocument?: (document: Document) => void;
 }
 
 export function InformationsStep({
-  initialTitle = "",
-  initialAddress = "",
-  initialPropertyType = "",
+  projectId,
+  formData,
+  notes,
+  swotAnalysis,
+  documents,
+  onFormDataChange,
+  onNotesChange,
+  onSwotChange,
+  onDocumentsChange,
+  onStepComplete,
   onOpenDocument,
 }: InformationsStepProps) {
-  const [documents, setDocuments] = useState<Document[]>([]);
-
-  const [notes, setNotes] = useState("");
+  // État local uniquement pour les feedbacks UI temporaires
   const [notesCopied, setNotesCopied] = useState(false);
   const [swotSaved, setSwotSaved] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [showOwnerInfo, setShowOwnerInfo] = useState(false);
-  const [modalContent, setModalContent] = useState<Document | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const [swotAnalysis, setSwotAnalysis] = useState({
-    strengths: "",
-    weaknesses: "",
-    opportunities: "",
-    threats: "",
-  });
-
-  const [formData, setFormData] = useState({
-    title: initialTitle,
-    address: initialAddress,
-    ownerName: "",
-    occupantName: "",
-    propertyType: initialPropertyType,
-    year: "",
-    materials: "",
-    geographicSector: "",
-  });
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleDeleteDocument = (id: string) => {
-    setDocuments(documents.filter((doc) => doc.id !== id));
+    onDocumentsChange(documents.filter((doc) => doc.id !== id));
   };
 
   // Fonction de validation
@@ -126,16 +141,41 @@ export function InformationsStep({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm()) {
       alert("Veuillez remplir tous les champs obligatoires");
       return;
     }
 
-    console.log("Données enregistrées:", formData);
-    alert("Informations enregistrées avec succès !");
-    setErrors({});
-    // Logique de sauvegarde API ici
+    setIsSaving(true);
+    try {
+      // Préparer les données pour l'API
+      const propertyData = {
+        owner_name: formData.ownerName,
+        occupant_name: formData.occupantName,
+        construction_year: formData.year ? parseInt(formData.year) : undefined,
+        materials: formData.materials || undefined,
+        geographic_sector: formData.geographicSector,
+        swot_strengths: swotAnalysis.strengths || undefined,
+        swot_weaknesses: swotAnalysis.weaknesses || undefined,
+        swot_opportunities: swotAnalysis.opportunities || undefined,
+        swot_threats: swotAnalysis.threats || undefined,
+        notes: notes || undefined,
+      };
+
+      // Appel API
+      await savePropertyInfo(projectId, propertyData);
+
+      console.log("Données enregistrées:", propertyData);
+      onStepComplete(); // Marque l'étape comme complétée (✓ dans la barre de progression)
+      alert("Informations enregistrées avec succès !");
+      setErrors({});
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde:", error);
+      alert(error instanceof Error ? error.message : "Erreur lors de la sauvegarde");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCopyNotes = () => {
@@ -242,7 +282,7 @@ export function InformationsStep({
                     value={formData.title}
                     required
                     onChange={(e) => {
-                      setFormData({ ...formData, title: e.target.value });
+                      onFormDataChange({ ...formData, title: e.target.value });
                       if (errors.title) setErrors({ ...errors, title: "" });
                     }}
                     placeholder="Ex: Immeuble A"
@@ -265,7 +305,7 @@ export function InformationsStep({
                     value={formData.address}
                     required
                     onChange={(e) => {
-                      setFormData({ ...formData, address: e.target.value });
+                      onFormDataChange({ ...formData, address: e.target.value });
                       if (errors.address) setErrors({ ...errors, address: "" });
                     }}
                     placeholder="Ex: 123 Rue des Immeubles, 75001 Paris"
@@ -292,7 +332,7 @@ export function InformationsStep({
                     value={formData.ownerName}
                     required
                     onChange={(e) => {
-                      setFormData({ ...formData, ownerName: e.target.value });
+                      onFormDataChange({ ...formData, ownerName: e.target.value });
                       if (errors.ownerName) setErrors({ ...errors, ownerName: "" });
                     }}
                     placeholder="Ex: Jean Dupont"
@@ -339,7 +379,7 @@ export function InformationsStep({
                     type="text"
                     value={formData.occupantName}
                     onChange={(e) =>
-                      setFormData({
+                      onFormDataChange({
                         ...formData,
                         occupantName: e.target.value,
                       })
@@ -358,7 +398,7 @@ export function InformationsStep({
                     value={formData.propertyType}
                     required
                     onChange={(e) => {
-                      setFormData({ ...formData, propertyType: e.target.value });
+                      onFormDataChange({ ...formData, propertyType: e.target.value });
                       if (errors.propertyType) setErrors({ ...errors, propertyType: "" });
                     }}
                     className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
@@ -388,7 +428,7 @@ export function InformationsStep({
                     min="1800"
                     max={new Date().getFullYear()}
                     onChange={(e) => {
-                      setFormData({ ...formData, year: e.target.value });
+                      onFormDataChange({ ...formData, year: e.target.value });
                       if (errors.year) setErrors({ ...errors, year: "" });
                     }}
                     placeholder="Ex: 1995"
@@ -411,7 +451,7 @@ export function InformationsStep({
                     value={formData.geographicSector}
                     required
                     onChange={(e) => {
-                      setFormData({
+                      onFormDataChange({
                         ...formData,
                         geographicSector: e.target.value,
                       });
@@ -434,9 +474,10 @@ export function InformationsStep({
               {/* Bouton Enregistrer */}
               <button
                 type="submit"
-                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base font-medium"
+                disabled={isSaving}
+                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Enregistrer les informations
+                {isSaving ? "Enregistrement..." : "Enregistrer les informations"}
               </button>
             </form>
 
@@ -447,7 +488,7 @@ export function InformationsStep({
               </h3>
               <textarea
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={(e) => onNotesChange(e.target.value)}
                 placeholder="Ajoutez vos observations, particularités du bien, points à vérifier..."
                 maxLength={500}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
@@ -564,7 +605,7 @@ export function InformationsStep({
                   <textarea
                     value={swotAnalysis.strengths}
                     onChange={(e) =>
-                      setSwotAnalysis({
+                      onSwotChange({
                         ...swotAnalysis,
                         strengths: e.target.value,
                       })
@@ -586,7 +627,7 @@ export function InformationsStep({
                   <textarea
                     value={swotAnalysis.weaknesses}
                     onChange={(e) =>
-                      setSwotAnalysis({
+                      onSwotChange({
                         ...swotAnalysis,
                         weaknesses: e.target.value,
                       })
@@ -608,7 +649,7 @@ export function InformationsStep({
                   <textarea
                     value={swotAnalysis.opportunities}
                     onChange={(e) =>
-                      setSwotAnalysis({
+                      onSwotChange({
                         ...swotAnalysis,
                         opportunities: e.target.value,
                       })
@@ -630,7 +671,7 @@ export function InformationsStep({
                   <textarea
                     value={swotAnalysis.threats}
                     onChange={(e) =>
-                      setSwotAnalysis({
+                      onSwotChange({
                         ...swotAnalysis,
                         threats: e.target.value,
                       })
