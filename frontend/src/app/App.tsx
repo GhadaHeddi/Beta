@@ -51,7 +51,7 @@ export default function App() {
     setView("home");
   };
 
-  const handleViewMarketTrends = (city: string) => {
+  const handleViewMarketTrends = (city: string) => { NoePI-Esisar
     setSelectedCity(city);
     setView("market-trends");
   };
@@ -64,6 +64,7 @@ export default function App() {
       propertyType={currentProject.propertyType}
       initialStep={currentProject.currentStep}
       onBack={handleBackToHome}
+      onDashboardClick={handleOpenDashboard}
     />;
   }
 
@@ -77,7 +78,7 @@ export default function App() {
   }
 
   if (view === "market-trends" && selectedCity) {
-    return <MarketTrends city={selectedCity} onBack={handleBackToHome} />;
+    return <MarketTrends city={selectedCity} onBack={handleBackToHome} onDashboardClick={handleOpenDashboard} />;
   }
 
   return (
