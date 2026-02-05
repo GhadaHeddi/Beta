@@ -21,6 +21,26 @@ from app.models import User, Project, ProjectShare, UserRole, PropertyInfo
 router = APIRouter(prefix="/projects", tags=["Projets"])
 
 
+# === Endpoint temporaire de test (sans authentification) ===
+
+@router.get("/dev/all", response_model=List[ProjectWithDetails])
+async def list_all_projects_dev(db: Session = Depends(get_db)):
+    """
+    [DEV ONLY] Liste tous les projets sans authentification.
+    À SUPPRIMER avant la mise en production.
+    """
+    projects = (
+        db.query(Project)
+        .options(
+            joinedload(Project.user),
+            joinedload(Project.property_info)
+        )
+        .order_by(Project.updated_at.desc())
+        .all()
+    )
+    return projects
+
+
 # === Helpers pour les permissions ===
 
 def get_team_user_ids(db: Session, user: User) -> List[int]:
