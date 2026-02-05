@@ -1,14 +1,15 @@
-import { 
-  User, 
-  Settings, 
-  Briefcase, 
-  BarChart3, 
-  Palette, 
-  BookOpen, 
-  MessageCircle, 
+import {
+  User,
+  Settings,
+  Briefcase,
+  BarChart3,
+  Palette,
+  BookOpen,
+  MessageCircle,
   FileText,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  UserPlus
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
@@ -16,6 +17,7 @@ interface ProfileDropdownProps {
   isOpen: boolean;
   onClose: () => void;
   onLogout: () => void;
+  onAddConsultant?: () => void;
   userName: string;
   userEmail: string;
   userRole: string;
@@ -23,16 +25,18 @@ interface ProfileDropdownProps {
   userAvatar?: string;
 }
 
-export function ProfileDropdown({ 
-  isOpen, 
-  onClose, 
+export function ProfileDropdown({
+  isOpen,
+  onClose,
   onLogout,
+  onAddConsultant,
   userName,
   userEmail,
   userRole,
   userInitials,
   userAvatar
 }: ProfileDropdownProps) {
+  const isAdmin = userRole === "Administrateur";
   const [theme, setTheme] = useState<"light" | "dark" | "auto">("light");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -130,6 +134,18 @@ export function ProfileDropdown({
         <MenuItem icon={Briefcase} label="Mes projets" />
         <MenuItem icon={BarChart3} label="Statistiques" />
       </div>
+
+      {/* Admin Section - Only visible for administrators */}
+      {isAdmin && onAddConsultant && (
+        <div className="py-2 border-t border-gray-200">
+          <div className="px-4 py-1">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Administration
+            </span>
+          </div>
+          <MenuItem icon={UserPlus} label="Ajouter un consultant" onClick={onAddConsultant} />
+        </div>
+      )}
 
       {/* Theme Section */}
       <div className="px-4 py-3 border-t border-b border-gray-200 bg-gray-50">

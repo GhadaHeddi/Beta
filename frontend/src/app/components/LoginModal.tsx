@@ -5,10 +5,9 @@ interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLogin: (username: string, password: string) => void;
-  onSwitchToSignUp?: () => void;
 }
 
-export function LoginModal({ isOpen, onClose, onLogin, onSwitchToSignUp }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -166,21 +165,6 @@ export function LoginModal({ isOpen, onClose, onLogin, onSwitchToSignUp }: Login
                 Mot de passe oublié ?
               </a>
             </div>
-
-            {onSwitchToSignUp && (
-              <div className="mt-4 text-center">
-                <p className="text-sm text-gray-600">
-                  Pas encore de compte ?{" "}
-                  <button
-                    type="button"
-                    onClick={onSwitchToSignUp}
-                    className="text-red-700 hover:text-red-800 font-medium transition-colors"
-                  >
-                    S'inscrire
-                  </button>
-                </p>
-              </div>
-            )}
           </form>
         </div>
       </div>

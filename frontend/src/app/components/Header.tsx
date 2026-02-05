@@ -7,10 +7,10 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { LoginModal } from "@/app/components/LoginModal";
-import { SignUpModal } from "@/app/components/SignUpModal";
 import { InboxDropdown } from "@/app/components/InboxDropdown";
 import { ProfileDropdown } from "@/app/components/ProfileDropdown";
 import { LogoutConfirmModal } from "@/app/components/LogoutConfirmModal";
+import { AddConsultantModal } from "@/app/components/AddConsultantModal";
 
 interface HeaderProps {
   onLogoClick?: () => void;
@@ -18,15 +18,12 @@ interface HeaderProps {
 }
 
 export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
-  const [isLoginModalOpen, setIsLoginModalOpen] =
-    useState(false);
-  const [isSignUpModalOpen, setIsSignUpModalOpen] =
-    useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(true); // Changed to true for demo
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isLogoutModalOpen, setIsLogoutModalOpen] =
-    useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isAddConsultantModalOpen, setIsAddConsultantModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(3);
 
   // User data (would come from auth context in real app)
@@ -46,30 +43,15 @@ export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
     setUnreadCount(3);
   };
 
-  const handleSignUp = (
-    name: string,
-    email: string,
-    password: string,
-  ) => {
-    console.log("Création de compte:", {
-      name,
-      email,
-      password,
-    });
-    setIsSignUpModalOpen(false);
-    setIsAuthenticated(true);
-    // Simulate receiving messages
-    setUnreadCount(3);
+  const handleAddConsultant = (name: string, email: string, password: string) => {
+    console.log("Création de consultant:", { name, email, password });
+    setIsAddConsultantModalOpen(false);
+    // TODO: API call to create consultant
   };
 
-  const handleSwitchToSignUp = () => {
-    setIsLoginModalOpen(false);
-    setIsSignUpModalOpen(true);
-  };
-
-  const handleSwitchToLogin = () => {
-    setIsSignUpModalOpen(false);
-    setIsLoginModalOpen(true);
+  const handleOpenAddConsultant = () => {
+    setIsProfileOpen(false);
+    setIsAddConsultantModalOpen(true);
   };
 
   const handleLogoutClick = () => {
@@ -122,12 +104,6 @@ export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
                 className="px-6 py-2.5 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors"
               >
                 Se connecter
-              </button>
-              <button
-                onClick={() => setIsSignUpModalOpen(true)}
-                className="px-6 py-2.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors"
-              >
-                S'inscrire
               </button>
             </div>
           ) : (
@@ -209,6 +185,7 @@ export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
                   isOpen={isProfileOpen}
                   onClose={() => setIsProfileOpen(false)}
                   onLogout={handleLogoutClick}
+                  onAddConsultant={handleOpenAddConsultant}
                   userName={userData.name}
                   userEmail={userData.email}
                   userRole={userData.role}
@@ -225,14 +202,12 @@ export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         onLogin={handleLogin}
-        onSwitchToSignUp={handleSwitchToSignUp}
       />
 
-      <SignUpModal
-        isOpen={isSignUpModalOpen}
-        onClose={() => setIsSignUpModalOpen(false)}
-        onSignUp={handleSignUp}
-        onSwitchToLogin={handleSwitchToLogin}
+      <AddConsultantModal
+        isOpen={isAddConsultantModalOpen}
+        onClose={() => setIsAddConsultantModalOpen(false)}
+        onAddConsultant={handleAddConsultant}
       />
 
       <LogoutConfirmModal
