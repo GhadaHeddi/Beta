@@ -56,37 +56,15 @@ export function InformationsStep({
   initialPropertyType = "",
   onOpenDocument,
 }: InformationsStepProps) {
-  const [documents, setDocuments] = useState<Document[]>([
-    {
-      id: "1",
-      name: "Plan cadastral",
-      size: "2.4 MB",
-      date: "20/01/2026",
-      icon: "🗺️",
-    },
-    {
-      id: "2",
-      name: "Plans techniques",
-      size: "1.8 MB",
-      date: "19/01/2026",
-      icon: "📐",
-    },
-    {
-      id: "3",
-      name: "Photos du bien",
-      size: "3.2 MB",
-      date: "18/01/2026",
-      icon: "📸",
-    },
-  ]);
+  const [documents, setDocuments] = useState<Document[]>([]);
 
   const [notes, setNotes] = useState("");
   const [notesCopied, setNotesCopied] = useState(false);
   const [swotSaved, setSwotSaved] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showOwnerInfo, setShowOwnerInfo] = useState(false);
-  const [modalContent, setModalContent] =
-    useState<Document | null>(null);
+  const [modalContent, setModalContent] = useState<Document | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [swotAnalysis, setSwotAnalysis] = useState({
     strengths: "",
@@ -110,9 +88,54 @@ export function InformationsStep({
     setDocuments(documents.filter((doc) => doc.id !== id));
   };
 
+  // Fonction de validation
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.title.trim()) {
+      newErrors.title = "Le titre est obligatoire";
+    }
+
+    if (!formData.address.trim()) {
+      newErrors.address = "L'adresse est obligatoire";
+    }
+
+    if (!formData.ownerName.trim()) {
+      newErrors.ownerName = "Le nom du propriétaire est obligatoire";
+    }
+
+    if (!formData.propertyType) {
+      newErrors.propertyType = "Le type de bien est obligatoire";
+    }
+
+    if (!formData.year) {
+      newErrors.year = "L'année de construction est obligatoire";
+    } else {
+      const yearNum = parseInt(formData.year);
+      const currentYear = new Date().getFullYear();
+      if (yearNum < 1800 || yearNum > currentYear) {
+        newErrors.year = `L'année doit être entre 1800 et ${currentYear}`;
+      }
+    }
+
+    if (!formData.geographicSector.trim()) {
+      newErrors.geographicSector = "Le secteur géographique est obligatoire";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = () => {
+    if (!validateForm()) {
+      alert("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+
     console.log("Données enregistrées:", formData);
-    // Logique de sauvegarde
+    alert("Informations enregistrées avec succès !");
+    setErrors({});
+    // Logique de sauvegarde API ici
   };
 
   const handleCopyNotes = () => {
@@ -138,9 +161,7 @@ export function InformationsStep({
       {/* Colonne gauche - Documents (25%) */}
       <div className="w-1/4">
         <div className="bg-white rounded-lg border border-gray-200 p-6 h-full">
-          <h3 className="text-lg text-gray-900 mb-4">
-            Documents
-          </h3>
+          <h3 className="text-lg text-gray-900 mb-4">Documents</h3>
 
           {/* Bouton Ajouter */}
           <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-4">
@@ -168,9 +189,7 @@ export function InformationsStep({
               >
                 <FileText className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-900 truncate">
-                    {doc.name}
-                  </p>
+                  <p className="text-sm text-gray-900 truncate">{doc.name}</p>
                   <p className="text-xs text-gray-500">
                     {doc.size} • {doc.date}
                   </p>
@@ -211,192 +230,215 @@ export function InformationsStep({
 
           {/* Formulaire */}
           <div className="p-6">
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              {/* Titre */}
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">
-                  Titre
-                </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      title: e.target.value,
-                    })
-                  }
-                  placeholder="Ex: Immeuble A"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              {/* Adresse */}
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">
-                  Adresse
-                </label>
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      address: e.target.value,
-                    })
-                  }
-                  placeholder="Ex: 123 Rue des Immeubles, 75001 Paris"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              {/* Nom du propriétaire */}
-              <div className="relative">
-                <label className="block text-sm text-gray-700 mb-2 flex items-center gap-1">
-                  Nom du propriétaire
-                  <Info
-                    className="w-4 h-4 text-blue-600 cursor-pointer"
-                    onClick={() =>
-                      setShowOwnerInfo(!showOwnerInfo)
-                    }
+            <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                {/* Titre */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Titre <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    required
+                    onChange={(e) => {
+                      setFormData({ ...formData, title: e.target.value });
+                      if (errors.title) setErrors({ ...errors, title: "" });
+                    }}
+                    placeholder="Ex: Immeuble A"
+                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      errors.title ? "border-red-500" : "border-gray-300"
+                    }`}
                   />
-                </label>
-                <input
-                  type="text"
-                  value={formData.ownerName}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      ownerName: e.target.value,
-                    })
-                  }
-                  placeholder="Ex: Jean Dupont"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                  {errors.title && (
+                    <p className="text-red-500 text-xs mt-1">{errors.title}</p>
+                  )}
+                </div>
 
-                {/* Popup propriétaire à droite */}
-                {showOwnerInfo && (
-                  <div className="absolute top-0 left-full ml-2 w-72 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-                    {/* Flèche pointant vers l'input */}
-                    <div className="absolute top-2 -left-2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-white"></div>
+                {/* Adresse */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Adresse <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    required
+                    onChange={(e) => {
+                      setFormData({ ...formData, address: e.target.value });
+                      if (errors.address) setErrors({ ...errors, address: "" });
+                    }}
+                    placeholder="Ex: 123 Rue des Immeubles, 75001 Paris"
+                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      errors.address ? "border-red-500" : "border-gray-300"
+                    }`}
+                  />
+                  {errors.address && (
+                    <p className="text-red-500 text-xs mt-1">{errors.address}</p>
+                  )}
+                </div>
 
-                    {/* Contenu des informations */}
-                    <div className="p-4 space-y-1 text-sm text-gray-700">
-                      <p>
-                        <strong>Nom complet:</strong> Jean
-                        Dupont
-                      </p>
-                      <p>
-                        <strong>Adresse :</strong> 123 Rue des
-                        Immeubles, 26 000 Valence
-                      </p>
-                      <p>
-                        <strong>Téléphone :</strong> +33 6 12 34
-                        56 78
-                      </p>
-                      <p>
-                        <strong>Email :</strong>{" "}
-                        jean.dupont@email.com
-                      </p>
+                {/* Nom du propriétaire */}
+                <div className="relative">
+                  <label className="block text-sm text-gray-700 mb-2 flex items-center gap-1">
+                    Nom du propriétaire <span className="text-red-500">*</span>
+                    <Info
+                      className="w-4 h-4 text-blue-600 cursor-pointer"
+                      onClick={() => setShowOwnerInfo(!showOwnerInfo)}
+                    />
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.ownerName}
+                    required
+                    onChange={(e) => {
+                      setFormData({ ...formData, ownerName: e.target.value });
+                      if (errors.ownerName) setErrors({ ...errors, ownerName: "" });
+                    }}
+                    placeholder="Ex: Jean Dupont"
+                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      errors.ownerName ? "border-red-500" : "border-gray-300"
+                    }`}
+                  />
+                  {errors.ownerName && (
+                    <p className="text-red-500 text-xs mt-1">{errors.ownerName}</p>
+                  )}
+
+                  {/* Popup propriétaire à droite */}
+                  {showOwnerInfo && (
+                    <div className="absolute top-0 left-full ml-2 w-72 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                      {/* Flèche pointant vers l'input */}
+                      <div className="absolute top-2 -left-2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-white"></div>
+
+                      {/* Contenu des informations */}
+                      <div className="p-4 space-y-1 text-sm text-gray-700">
+                        <p>
+                          <strong>Nom complet:</strong> Jean Dupont
+                        </p>
+                        <p>
+                          <strong>Adresse :</strong> 123 Rue des Immeubles, 26
+                          000 Valence
+                        </p>
+                        <p>
+                          <strong>Téléphone :</strong> +33 6 12 34 56 78
+                        </p>
+                        <p>
+                          <strong>Email :</strong> jean.dupont@email.com
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+
+                {/* Nom de l'occupant */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Nom de l'occupant
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.occupantName}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        occupantName: e.target.value,
+                      })
+                    }
+                    placeholder="Ex: Société ABC"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Type de bien */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Type de bien <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.propertyType}
+                    required
+                    onChange={(e) => {
+                      setFormData({ ...formData, propertyType: e.target.value });
+                      if (errors.propertyType) setErrors({ ...errors, propertyType: "" });
+                    }}
+                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      errors.propertyType ? "border-red-500" : "border-gray-300"
+                    }`}
+                  >
+                    <option value="">Sélectionner</option>
+                    <option value="bureaux">Bureau</option>
+                    <option value="local_activite">Local d'activité</option>
+                    <option value="local_commercial">Local commercial</option>
+                    <option value="terrain">Terrain</option>
+                  </select>
+                  {errors.propertyType && (
+                    <p className="text-red-500 text-xs mt-1">{errors.propertyType}</p>
+                  )}
+                </div>
+
+                {/* Année de construction */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Année de construction <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.year}
+                    required
+                    min="1800"
+                    max={new Date().getFullYear()}
+                    onChange={(e) => {
+                      setFormData({ ...formData, year: e.target.value });
+                      if (errors.year) setErrors({ ...errors, year: "" });
+                    }}
+                    placeholder="Ex: 1995"
+                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      errors.year ? "border-red-500" : "border-gray-300"
+                    }`}
+                  />
+                  {errors.year && (
+                    <p className="text-red-500 text-xs mt-1">{errors.year}</p>
+                  )}
+                </div>
+
+                {/* Secteur géographique */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Secteur géographique <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.geographicSector}
+                    required
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        geographicSector: e.target.value,
+                      });
+                      if (errors.geographicSector)
+                        setErrors({ ...errors, geographicSector: "" });
+                    }}
+                    placeholder="Ex: Centre-ville, Zone industrielle"
+                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      errors.geographicSector ? "border-red-500" : "border-gray-300"
+                    }`}
+                  />
+                  {errors.geographicSector && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.geographicSector}
+                    </p>
+                  )}
+                </div>
               </div>
 
-              {/* Nom de l'occupant */}
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">
-                  Nom de l'occupant
-                </label>
-                <input
-                  type="text"
-                  value={formData.occupantName}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      occupantName: e.target.value,
-                    })
-                  }
-                  placeholder="Ex: Société ABC"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              {/* Type de bien */}
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">
-                  Type de bien
-                </label>
-                <select
-                  value={formData.propertyType}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      propertyType: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Sélectionner</option>
-                  <option value="bureaux"> Bureau</option>
-                  <option value="local_activite">
-                    {" "}
-                    Local d'activité
-                  </option>
-                  <option value="local_commercial">
-                    {" "}
-                    Local commercial
-                  </option>
-                  <option value="terrain"> Terrain</option>
-                </select>
-              </div>
-
-              {/* Année de construction */}
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">
-                  Année de construction
-                </label>
-                <input
-                  type="number"
-                  value={formData.year}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      year: e.target.value,
-                    })
-                  }
-                  placeholder="Ex: 1995"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              {/* Secteur géographique */}
-              <div>
-                <label className="block text-sm text-gray-700 mb-2">
-                  Secteur géographique
-                </label>
-                <input
-                  type="text"
-                  value={formData.geographicSector}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      geographicSector: e.target.value,
-                    })
-                  }
-                  placeholder="Ex: Centre-ville, Zone industrielle"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* Bouton Enregistrer */}
-            <button
-              onClick={handleSave}
-              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base font-medium"
-            >
-              Enregistrer les informations
-            </button>
+              {/* Bouton Enregistrer */}
+              <button
+                type="submit"
+                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base font-medium"
+              >
+                Enregistrer les informations
+              </button>
+            </form>
 
             {/* Bloc-notes de l'évaluation */}
             <div className="mt-6 bg-white rounded-lg border border-gray-200 p-4">
@@ -471,8 +513,7 @@ export function InformationsStep({
                       {formData.title || "Votre bien"}
                     </p>
                     <p className="text-xs text-gray-600">
-                      {formData.address ||
-                        "Adresse non renseignée"}
+                      {formData.address || "Adresse non renseignée"}
                     </p>
                   </div>
                 </div>

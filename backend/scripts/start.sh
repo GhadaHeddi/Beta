@@ -2,7 +2,7 @@
 set -e
 
 echo "🔄 Attente de la base de données..."
-while ! pg_isready -h db -p 5432 -U oryem_user -q; do
+until python -c "import psycopg2; psycopg2.connect('postgresql://oryem_user:oryem_password@db:5432/oryem_db')" 2>/dev/null; do
   sleep 1
 done
 echo "✅ Base de données prête"
