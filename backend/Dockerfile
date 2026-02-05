@@ -1,11 +1,14 @@
 # Dockerfile Backend FastAPI - ORYEM
 FROM python:3.11-slim
 
+ARG PROXY
+
 # Variables d'environnement
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV HTTP_PROXY=${PROXY}
 
 # Répertoire de travail
 WORKDIR /app
@@ -19,7 +22,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copie et installation des dépendances Python
 COPY requirements.txt .
-RUN pip install --proxy http://pi03joubertb:Ge5Hg2Rs7Ze3Jz9Nb4My@proxy-http.esisar.grenoble-inp.fr:3128 --no-cache-dir -r requirements.txt
+RUN pip install --proxy ${HTTP_PROXY} --no-cache-dir -r requirements.txt
 
 # Copie du code source
 COPY . .
