@@ -11,13 +11,34 @@ from app.schemas.project import (
     ProjectUpdate,
     ProjectResponse,
     ProjectWithOwner,
+    ProjectWithDetails,
     ProjectShareCreate,
     ProjectShareResponse,
 )
 from app.utils.security import get_current_user, get_user_admin_id
-from app.models import User, Project, ProjectShare, UserRole
+from app.models import User, Project, ProjectShare, UserRole, PropertyInfo
 
 router = APIRouter(prefix="/projects", tags=["Projets"])
+
+
+# === Endpoint temporaire de test (sans authentification) ===
+
+@router.get("/dev/all", response_model=List[ProjectWithDetails])
+async def list_all_projects_dev(db: Session = Depends(get_db)):
+    """
+    [DEV ONLY] Liste tous les projets sans authentification.
+    À SUPPRIMER avant la mise en production.
+    """
+    projects = (
+        db.query(Project)
+        .options(
+            joinedload(Project.user),
+            joinedload(Project.property_info)
+        )
+        .order_by(Project.updated_at.desc())
+        .all()
+    )
+    return projects
 
 
 # === Helpers pour les permissions ===
@@ -106,7 +127,7 @@ def can_delete_project(db: Session, user: User, project: Project) -> bool:
 
 # === Routes CRUD ===
 
-@router.get("/", response_model=List[ProjectWithOwner])
+@router.get("/", response_model=List[ProjectWithDetails])
 async def list_projects(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -116,13 +137,18 @@ async def list_projects(
 
     - Admin : tous les projets de son équipe
     - Consultant : ses projets + projets de l'équipe (lecture)
+
+    Inclut les informations du propriétaire et du bien (PropertyInfo).
     """
     team_ids = get_team_user_ids(db, current_user)
 
     # Projets de l'équipe + projets partagés avec l'utilisateur
     projects = (
         db.query(Project)
-        .options(joinedload(Project.user))
+        .options(
+            joinedload(Project.user),
+            joinedload(Project.property_info)
+        )
         .filter(
             or_(
                 Project.user_id.in_(team_ids),

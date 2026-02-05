@@ -6,6 +6,7 @@ from typing import Optional, List
 from datetime import datetime
 from app.models.project import ProjectStatus, PropertyType
 from app.schemas.user import UserBrief
+from app.schemas.property_info import PropertyInfoBrief
 
 
 # === Schémas de base ===
@@ -50,6 +51,15 @@ class ProjectResponse(ProjectBase):
 class ProjectWithOwner(ProjectResponse):
     """Projet avec informations du propriétaire"""
     user: UserBrief
+
+    class Config:
+        from_attributes = True
+
+
+class ProjectWithDetails(ProjectResponse):
+    """Projet avec propriétaire et infos du bien"""
+    user: UserBrief
+    property_info: Optional[PropertyInfoBrief] = None
 
     class Config:
         from_attributes = True

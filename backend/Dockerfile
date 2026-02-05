@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copie et installation des dépendances Python
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --proxy http://pi03joubertb:Ge5Hg2Rs7Ze3Jz9Nb4My@proxy-http.esisar.grenoble-inp.fr:3128 --no-cache-dir -r requirements.txt
 
 # Copie du code source
 COPY . .
