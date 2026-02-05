@@ -5,12 +5,23 @@ import {
   ChevronDown,
   LayoutDashboard,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LoginModal } from "@/app/components/LoginModal";
 import { InboxDropdown } from "@/app/components/InboxDropdown";
 import { ProfileDropdown } from "@/app/components/ProfileDropdown";
 import { LogoutConfirmModal } from "@/app/components/LogoutConfirmModal";
 import { AddConsultantModal } from "@/app/components/AddConsultantModal";
+
+const API_BASE_URL = "http://localhost:8000/api";
+
+interface UserData {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  avatar_url?: string;
+}
 
 interface HeaderProps {
   onLogoClick?: () => void;
@@ -18,35 +29,133 @@ interface HeaderProps {
 }
 
 export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Changed to true for demo
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isAddConsultantModalOpen, setIsAddConsultantModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(3);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
-  // User data (would come from auth context in real app)
-  const userData = {
-    name: "Sébastien BESSON",
-    email: "sebastien.besson@oryem.fr",
-    role: "Administrateur",
-    initials: "SB",
-    avatar: undefined, // or URL to avatar image
+  // Check for existing token on mount
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      setAccessToken(token);
+      fetchCurrentUser(token);
+    }
+  }, []);
+
+  const fetchCurrentUser = async (token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const user = await response.json();
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+        setIsLoginModalOpen(false);
+      } else {
+        // Token invalid, clear it
+        localStorage.removeItem("access_token");
+        setAccessToken(null);
+        setIsAuthenticated(false);
+        setIsLoginModalOpen(true);
+      }
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      localStorage.removeItem("access_token");
+      setIsAuthenticated(false);
+      setIsLoginModalOpen(true);
+    }
   };
 
-  const handleLogin = (username: string, password: string) => {
-    console.log("Connexion:", { username, password });
-    setIsLoginModalOpen(false);
-    setIsAuthenticated(true);
-    // Simulate receiving messages
-    setUnreadCount(3);
+  // Compute userData from currentUser
+  const userData = currentUser
+    ? {
+        name: `${currentUser.first_name} ${currentUser.last_name}`,
+        email: currentUser.email,
+        role: currentUser.role === "admin" ? "Administrateur" : "Consultant",
+        initials: `${currentUser.first_name[0]}${currentUser.last_name[0]}`.toUpperCase(),
+        avatar: currentUser.avatar_url,
+      }
+    : {
+        name: "",
+        email: "",
+        role: "",
+        initials: "",
+        avatar: undefined,
+      };
+
+  const handleLogin = async (email: string, password: string) => {
+    setLoginError(null);
+    try {
+      const formData = new FormData();
+      formData.append("username", email);
+      formData.append("password", password);
+
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const token = data.access_token;
+        localStorage.setItem("access_token", token);
+        setAccessToken(token);
+        await fetchCurrentUser(token);
+        setUnreadCount(3);
+      } else {
+        const errorData = await response.json();
+        setLoginError(errorData.detail || "Email ou mot de passe incorrect");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      setLoginError("Erreur de connexion au serveur");
+    }
   };
 
-  const handleAddConsultant = (name: string, email: string, password: string) => {
-    console.log("Création de consultant:", { name, email, password });
-    setIsAddConsultantModalOpen(false);
-    // TODO: API call to create consultant
+  const handleAddConsultant = async (name: string, email: string, password: string) => {
+    if (!accessToken) return;
+
+    try {
+      // Parse name into first_name and last_name
+      const nameParts = name.trim().split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      const response = await fetch(`${API_BASE_URL}/admin/consultants`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          first_name: firstName,
+          last_name: lastName,
+        }),
+      });
+
+      if (response.ok) {
+        setIsAddConsultantModalOpen(false);
+        alert("Consultant créé avec succès !");
+      } else {
+        const errorData = await response.json();
+        alert(errorData.detail || "Erreur lors de la création du consultant");
+      }
+    } catch (error) {
+      console.error("Error creating consultant:", error);
+      alert("Erreur de connexion au serveur");
+    }
   };
 
   const handleOpenAddConsultant = () => {
@@ -60,10 +169,13 @@ export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
   };
 
   const handleLogoutConfirm = () => {
+    localStorage.removeItem("access_token");
+    setAccessToken(null);
+    setCurrentUser(null);
     setIsLogoutModalOpen(false);
     setIsAuthenticated(false);
+    setIsLoginModalOpen(true);
     setUnreadCount(0);
-    console.log("Déconnecté");
   };
 
   const handleDashboardClick = () => {
@@ -200,8 +312,8 @@ export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
 
       <LoginModal
         isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
         onLogin={handleLogin}
+        error={loginError}
       />
 
       <AddConsultantModal
