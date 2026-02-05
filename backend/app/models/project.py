@@ -45,6 +45,7 @@ class Project(Base):
     documents = relationship("Document", back_populates="project", cascade="all, delete-orphan")
     comparables = relationship("Comparable", back_populates="project", cascade="all, delete-orphan")
     valuations = relationship("Valuation", back_populates="project", cascade="all, delete-orphan")
+    shares = relationship("ProjectShare", back_populates="project", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Project(id={self.id}, title='{self.title}', status='{self.status}')>"

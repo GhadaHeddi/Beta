@@ -1,7 +1,7 @@
 """
 Modèle Valuation - Estimations de valeur par différentes méthodes
 """
-from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, Enum as SQLEnum, JSON
+from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey, Enum as SQLEnum, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from enum import Enum

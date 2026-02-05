@@ -7,8 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base
 
-# Import des routeurs (à décommenter au fur et à mesure)
-# from app.routers import auth, users, projects, documents, comparables, dvf
+# Import des routeurs
+from app.routers.auth import router as auth_router
+from app.routers.admin import router as admin_router
+from app.routers.projects import router as projects_router
 
 app = FastAPI(
     title="ORYEM API",
@@ -63,12 +65,9 @@ async def health_check():
 
 
 # Enregistrement des routeurs
-# app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-# app.include_router(users.router, prefix="/api/users", tags=["Users"])
-# app.include_router(projects.router, prefix="/api/projects", tags=["Projects"])
-# app.include_router(documents.router, prefix="/api/documents", tags=["Documents"])
-# app.include_router(comparables.router, prefix="/api/comparables", tags=["Comparables"])
-# app.include_router(dvf.router, prefix="/api/dvf", tags=["DVF"])
+app.include_router(auth_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
+app.include_router(projects_router, prefix="/api")
 
 
 if __name__ == "__main__":

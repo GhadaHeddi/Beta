@@ -27,8 +27,12 @@ COPY . .
 # Création du dossier uploads
 RUN mkdir -p uploads
 
+# Copie et permissions du script de démarrage
+COPY scripts/start.sh /start.sh
+RUN chmod +x /start.sh
+
 # Port exposé
 EXPOSE 8000
 
-# Commande de démarrage
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Commande de démarrage (migrations + serveur)
+CMD ["/start.sh"]
