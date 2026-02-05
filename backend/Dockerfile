@@ -9,6 +9,9 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV HTTP_PROXY=${PROXY}
+ENV HTTPS_PROXY=${PROXY}
+ENV http_proxy=${PROXY}
+ENV https_proxy=${PROXY}
 
 # Répertoire de travail
 WORKDIR /app
@@ -39,3 +42,5 @@ EXPOSE 8000
 
 # Commande de démarrage (migrations + serveur)
 CMD ["/start.sh"]
+
+
