@@ -152,6 +152,34 @@ async def list_trash_projects_dev(db: Session = Depends(get_db)):
     return projects
 
 
+@router.delete("/dev/{project_id}", response_model=ProjectResponse)
+async def soft_delete_project_dev(
+    project_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    [DEV ONLY] Met à jour les informations du bien sans authentification.
+    À SUPPRIMER avant la mise en production.
+    """
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Projet non trouvé"
+        )
+
+    if project.deleted_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ce projet est déjà dans la corbeille"
+        )
+
+    project.deleted_at = datetime.utcnow()
+    db.commit()
+    db.refresh(project)
+    return project
+
 @router.post("/dev/{project_id}/restore", response_model=ProjectResponse)
 async def restore_project_dev(
     project_id: int,
