@@ -1,6 +1,7 @@
 import {
   Edit2,
   Share2,
+  Trash2,
   Building2,
   Factory,
   Store,
@@ -9,9 +10,11 @@ import {
   Loader2,
   AlertCircle,
   RefreshCw,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import { useRecentProjects } from "@/hooks/useProjects";
+import { deleteProject } from "@/services/projectService";
 import type { Project, ProjectStatus, PropertyType } from "@/types/project";
 
 // Mapping des types de propriété backend vers l'affichage
@@ -51,6 +54,37 @@ interface RecentProjectsProps {
 export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
   const { projects, loading, error, refetch } = useRecentProjects();
   const [progressFilter, setProgressFilter] = useState<"all" | "0-50" | "50-75" | "75-99" | "completed">("all");
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteClick = (e: React.MouseEvent, project: Project) => {
+    e.stopPropagation();
+    setProjectToDelete(project);
+    setDeleteError(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!projectToDelete) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await deleteProject(projectToDelete.id);
+      setProjectToDelete(null);
+      refetch();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Erreur lors de la suppression");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setProjectToDelete(null);
+    setDeleteError(null);
+  };
 
   // Filtrer les projets en fonction du filtre de progression
   const filteredProjects = projects.filter((project) => {
@@ -318,6 +352,13 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
                             >
                               <Share2 className="w-4 h-4 text-gray-600" />
                             </button>
+                            <button
+                              onClick={(e) => handleDeleteClick(e, project)}
+                              className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Supprimer le projet"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -329,6 +370,78 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
           </div>
         </div>
       </div>
+
+      {/* Modale de confirmation de suppression */}
+      {projectToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Overlay */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={handleCancelDelete}
+          />
+
+          {/* Modale */}
+          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+            {/* Bouton fermer */}
+            <button
+              onClick={handleCancelDelete}
+              className="absolute top-4 right-4 p-1 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+
+            {/* Icone */}
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+            </div>
+
+            {/* Contenu */}
+            <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+              Supprimer le projet ?
+            </h3>
+            <p className="text-gray-600 text-center mb-2">
+              Le projet <span className="font-medium">"{projectToDelete.title}"</span> sera deplace dans la corbeille.
+            </p>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              Il sera definitivement supprime apres 15 jours. Vous pouvez le restaurer depuis la corbeille avant cette date.
+            </p>
+
+            {/* Erreur */}
+            {deleteError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600 text-center">{deleteError}</p>
+              </div>
+            )}
+
+            {/* Boutons */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelDelete}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Suppression...
+                  </>
+                ) : (
+                  "Supprimer"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

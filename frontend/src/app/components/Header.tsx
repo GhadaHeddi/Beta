@@ -26,9 +26,10 @@ interface UserData {
 interface HeaderProps {
   onLogoClick?: () => void;
   onDashboardClick?: () => void;
+  onTrashClick?: () => void;
 }
 
-export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
+export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderProps) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isInboxOpen, setIsInboxOpen] = useState(false);
@@ -184,6 +185,13 @@ export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
     }
   };
 
+  const handleTrashClick = () => {
+    setIsProfileOpen(false);
+    if (onTrashClick) {
+      onTrashClick();
+    }
+  };
+
   return (
     <>
       <header className="sticky top-0 bg-white border-b border-gray-200 px-8 py-4 z-30 h-24">
@@ -298,6 +306,7 @@ export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
                   onClose={() => setIsProfileOpen(false)}
                   onLogout={handleLogoutClick}
                   onAddConsultant={handleOpenAddConsultant}
+                  onTrashClick={handleTrashClick}
                   userName={userData.name}
                   userEmail={userData.email}
                   userRole={userData.role}
