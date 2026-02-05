@@ -265,7 +265,8 @@ export async function restoreProjectAuth(projectId: number): Promise<Project> {
   if (response.status === 401) {
     throw new Error('Session expirée');
   }
-
+}
+/*
  * Interface pour les données du bien immobilier
  */
 export interface PropertyInfoData {
