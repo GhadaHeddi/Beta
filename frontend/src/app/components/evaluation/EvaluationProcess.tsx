@@ -28,6 +28,7 @@ interface EvaluationProcessProps {
   projectAddress: string;
   propertyType: string;
   onBack?: () => void;
+  onDashboardClick?: () => void;
 }
 
 export function EvaluationProcess({
@@ -35,6 +36,7 @@ export function EvaluationProcess({
   projectAddress,
   propertyType,
   onBack,
+  onDashboardClick,
 }: EvaluationProcessProps) {
   const [activeTab, setActiveTab] =
     useState<string>("informations");
@@ -131,7 +133,7 @@ export function EvaluationProcess({
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* En-tête fixe */}
       <div className="sticky top-0 z-50">
-        <Header />
+        <Header onLogoClick={onBack} onDashboardClick={onDashboardClick} />
       </div>
 
       {/* Barre d'onglets avec barre de progression intégrée */}

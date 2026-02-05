@@ -37,11 +37,12 @@ export default function App() {
   };
 
   if (view === "evaluation" && currentProject) {
-    return <EvaluationProcess 
-      projectTitle={currentProject.title} 
+    return <EvaluationProcess
+      projectTitle={currentProject.title}
       projectAddress={currentProject.address}
       propertyType={currentProject.propertyType}
       onBack={handleBackToHome}
+      onDashboardClick={handleOpenDashboard}
     />;
   }
 
@@ -55,7 +56,7 @@ export default function App() {
   }
 
   if (view === "market-trends" && selectedCity) {
-    return <MarketTrends city={selectedCity} onBack={handleBackToHome} />;
+    return <MarketTrends city={selectedCity} onBack={handleBackToHome} onDashboardClick={handleOpenDashboard} />;
   }
 
   return (
