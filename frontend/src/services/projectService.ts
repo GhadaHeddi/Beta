@@ -243,3 +243,138 @@ export async function restoreProject(projectId: number): Promise<Project> {
 
   return response.json();
 }
+
+/**
+ * Restaure un projet depuis la corbeille avec authentification (production)
+ */
+export async function restoreProjectAuth(projectId: number): Promise<Project> {
+  const token = localStorage.getItem('access_token');
+
+  if (!token) {
+    throw new Error('Non authentifié');
+  }
+
+  const response = await fetch(`${API_BASE}/api/projects/${projectId}/restore`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (response.status === 401) {
+    throw new Error('Session expirée');
+  }
+
+  if (response.status === 404) {
+    throw new Error('Projet non trouvé');
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Récupère les projets dans la corbeille (mode dev, sans auth)
+ */
+export async function getTrashProjects(): Promise<Project[]> {
+  const response = await fetch(`${API_BASE}/api/projects/dev/trash/all`, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Récupère les projets dans la corbeille avec authentification (production)
+ * - Admin : voit tous les projets supprimés de son équipe
+ * - Consultant : voit uniquement ses propres projets supprimés
+ */
+export async function getTrashProjectsAuth(): Promise<Project[]> {
+  const token = localStorage.getItem('access_token');
+
+  if (!token) {
+    throw new Error('Non authentifié');
+  }
+
+  const response = await fetch(`${API_BASE}/api/projects/trash`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (response.status === 401) {
+    throw new Error('Session expirée');
+  }
+
+  if (!response.ok) {
+    throw new Error(`Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Supprime définitivement un projet (mode dev, sans auth)
+ * Le projet doit être dans la corbeille.
+ */
+export async function permanentDeleteProject(projectId: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/permanent`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Projet non trouvé');
+    }
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+}
+
+/**
+ * Supprime définitivement un projet avec authentification (production)
+ * Le projet doit être dans la corbeille.
+ */
+export async function permanentDeleteProjectAuth(projectId: number): Promise<void> {
+  const token = localStorage.getItem('access_token');
+
+  if (!token) {
+    throw new Error('Non authentifié');
+  }
+
+  const response = await fetch(`${API_BASE}/api/projects/${projectId}/permanent`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (response.status === 401) {
+    throw new Error('Session expirée');
+  }
+
+  if (response.status === 404) {
+    throw new Error('Projet non trouvé');
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+}

@@ -180,6 +180,38 @@ async def restore_project_dev(
     return project
 
 
+@router.delete("/dev/{project_id}/permanent", status_code=status.HTTP_204_NO_CONTENT)
+async def permanent_delete_project_dev(
+    project_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    [DEV ONLY] Supprime définitivement un projet de la corbeille.
+    Le projet doit être dans la corbeille pour être supprimé définitivement.
+    À SUPPRIMER avant la mise en production.
+    """
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Projet non trouvé"
+        )
+
+    if project.deleted_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ce projet n'est pas dans la corbeille. Utilisez d'abord la suppression normale."
+        )
+
+    # Supprimer les partages associés
+    db.query(ProjectShare).filter(ProjectShare.project_id == project_id).delete()
+
+    # Supprimer le projet définitivement
+    db.delete(project)
+    db.commit()
+
+
 # === Helpers pour les permissions ===
 
 def get_team_user_ids(db: Session, user: User) -> List[int]:
@@ -590,4 +622,129 @@ async def remove_project_share(
         )
 
     db.delete(share)
+    db.commit()
+
+
+# === Routes de la corbeille ===
+
+@router.get("/trash", response_model=List[ProjectWithDetails])
+async def list_trash_projects(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Liste les projets dans la corbeille.
+
+    - Admin : voit tous les projets dans la corbeille (de son équipe)
+    - Consultant : voit uniquement ses propres projets supprimés
+    """
+    if current_user.role == UserRole.ADMIN:
+        # Admin : tous les projets supprimés de son équipe
+        team_ids = get_team_user_ids(db, current_user)
+        projects = (
+            db.query(Project)
+            .options(
+                joinedload(Project.user),
+                joinedload(Project.property_info)
+            )
+            .filter(
+                Project.deleted_at.isnot(None),
+                Project.user_id.in_(team_ids)
+            )
+            .order_by(Project.deleted_at.desc())
+            .all()
+        )
+    else:
+        # Consultant : uniquement ses propres projets supprimés
+        projects = (
+            db.query(Project)
+            .options(
+                joinedload(Project.user),
+                joinedload(Project.property_info)
+            )
+            .filter(
+                Project.deleted_at.isnot(None),
+                Project.user_id == current_user.id
+            )
+            .order_by(Project.deleted_at.desc())
+            .all()
+        )
+
+    return projects
+
+
+@router.post("/{project_id}/restore", response_model=ProjectResponse)
+async def restore_project(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Restaure un projet depuis la corbeille.
+
+    Seul le propriétaire ou l'admin de l'équipe peut restaurer un projet.
+    """
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Projet non trouvé"
+        )
+
+    if not can_delete_project(db, current_user, project):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous n'avez pas le droit de restaurer ce projet"
+        )
+
+    if project.deleted_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ce projet n'est pas dans la corbeille"
+        )
+
+    project.deleted_at = None
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+@router.delete("/{project_id}/permanent", status_code=status.HTTP_204_NO_CONTENT)
+async def permanent_delete_project(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Supprime définitivement un projet de la corbeille.
+
+    Le projet doit être dans la corbeille pour être supprimé définitivement.
+    Seul le propriétaire ou l'admin de l'équipe peut supprimer définitivement un projet.
+    """
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Projet non trouvé"
+        )
+
+    if not can_delete_project(db, current_user, project):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous n'avez pas le droit de supprimer ce projet"
+        )
+
+    if project.deleted_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ce projet n'est pas dans la corbeille. Utilisez d'abord la suppression normale."
+        )
+
+    # Supprimer les partages associés
+    db.query(ProjectShare).filter(ProjectShare.project_id == project_id).delete()
+
+    # Supprimer le projet définitivement
+    db.delete(project)
     db.commit()
