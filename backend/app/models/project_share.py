@@ -1,10 +1,18 @@
 """
 Modèle ProjectShare - Partage de projets entre consultants
 """
-from sqlalchemy import Column, Integer, Boolean, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, Boolean, DateTime, ForeignKey, UniqueConstraint, Enum, String
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
+import enum
+
+
+class SharePermission(str, enum.Enum):
+    """Niveaux de permission pour le partage de projets"""
+    READ = "read"       # Lecture seule
+    WRITE = "write"     # Lecture et écriture
+    ADMIN = "admin"     # Lecture, écriture et suppression
 
 
 class ProjectShare(Base):
@@ -13,7 +21,9 @@ class ProjectShare(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    can_write = Column(Boolean, default=True)  # Droit d'écriture
+    can_write = Column(Boolean, default=True)  # Droit d'écriture (conservé pour compatibilité)
+    # Utiliser String pour stocker les valeurs de l'enum directement
+    permission = Column(String(10), default="write")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Contrainte unique : un utilisateur ne peut avoir qu'un partage par projet
@@ -26,4 +36,4 @@ class ProjectShare(Base):
     user = relationship("User", back_populates="shared_projects")
 
     def __repr__(self):
-        return f"<ProjectShare(project_id={self.project_id}, user_id={self.user_id}, can_write={self.can_write})>"
+        return f"<ProjectShare(project_id={self.project_id}, user_id={self.user_id}, permission={self.permission})>"

@@ -15,6 +15,7 @@ import {
 import { useState } from "react";
 import { useRecentProjects } from "@/hooks/useProjects";
 import { deleteProject } from "@/services/projectService";
+import { ShareModal } from "@/app/components/ShareModal";
 import type { Project, ProjectStatus, PropertyType } from "@/types/project";
 
 // Mapping des types de propriété backend vers l'affichage
@@ -55,8 +56,14 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
   const { projects, loading, error, refetch } = useRecentProjects();
   const [progressFilter, setProgressFilter] = useState<"all" | "0-50" | "50-75" | "75-99" | "completed">("all");
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [projectToShare, setProjectToShare] = useState<Project | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleShareClick = (e: React.MouseEvent, project: Project) => {
+    e.stopPropagation();
+    setProjectToShare(project);
+  };
 
   const handleDeleteClick = (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
@@ -346,7 +353,7 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
                               <Edit2 className="w-4 h-4 text-gray-600" />
                             </button>
                             <button
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e) => handleShareClick(e, project)}
                               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                               title="Partager le projet"
                             >
@@ -441,6 +448,16 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modale de partage */}
+      {projectToShare && (
+        <ShareModal
+          isOpen={true}
+          onClose={() => setProjectToShare(null)}
+          projectId={projectToShare.id}
+          projectTitle={projectToShare.title}
+        />
       )}
     </div>
   );

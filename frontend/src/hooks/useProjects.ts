@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getRecentProjects } from '@/services/projectService';
+import { getRecentProjectsAuth } from '@/services/projectService';
 import type { Project } from '@/types/project';
 
 export function useRecentProjects() {
@@ -11,7 +11,7 @@ export function useRecentProjects() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getRecentProjects();
+      const data = await getRecentProjectsAuth();
       setProjects(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
