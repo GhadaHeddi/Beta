@@ -31,6 +31,7 @@ export interface Project {
   current_step: number;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
   user: UserBrief;
   property_info: PropertyInfoBrief | null;
 }

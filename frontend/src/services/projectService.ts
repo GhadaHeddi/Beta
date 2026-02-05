@@ -163,3 +163,83 @@ export async function getProjectByIdAuth(projectId: number): Promise<Project> {
 
   return response.json();
 }
+
+/**
+ * Supprime un projet (soft delete - déplace dans la corbeille)
+ * Mode dev, sans auth
+ * TODO: Remplacer par deleteProjectAuth en production
+ */
+export async function deleteProject(projectId: number): Promise<Project> {
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Projet non trouvé');
+    }
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Supprime un projet avec authentification (production)
+ */
+export async function deleteProjectAuth(projectId: number): Promise<Project> {
+  const token = localStorage.getItem('access_token');
+
+  if (!token) {
+    throw new Error('Non authentifié');
+  }
+
+  const response = await fetch(`${API_BASE}/api/projects/${projectId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (response.status === 401) {
+    throw new Error('Session expirée');
+  }
+
+  if (response.status === 404) {
+    throw new Error('Projet non trouvé');
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Restaure un projet depuis la corbeille (mode dev, sans auth)
+ */
+export async function restoreProject(projectId: number): Promise<Project> {
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/restore`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Projet non trouvé');
+    }
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
