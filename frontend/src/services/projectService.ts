@@ -266,6 +266,42 @@ export async function restoreProjectAuth(projectId: number): Promise<Project> {
     throw new Error('Session expirée');
   }
 
+ * Interface pour les données du bien immobilier
+ */
+export interface PropertyInfoData {
+  owner_name?: string;
+  owner_contact?: string;
+  occupant_name?: string;
+  occupant_contact?: string;
+  construction_year?: number;
+  materials?: string;
+  total_surface?: number;
+  terrain_surface?: number;
+  geographic_sector?: string;
+  swot_strengths?: string;
+  swot_weaknesses?: string;
+  swot_opportunities?: string;
+  swot_threats?: string;
+  notes?: string;
+}
+
+/**
+ * Sauvegarde les informations du bien pour un projet
+ * Utilise l'endpoint de dev (sans auth) pour les tests.
+ * TODO: Remplacer par /{project_id}/property-info avec authentification en production.
+ * @param projectId ID du projet
+ * @param data Données du bien à sauvegarder
+ */
+export async function savePropertyInfo(projectId: number, data: PropertyInfoData): Promise<PropertyInfoData> {
+  // Mode dev : endpoint sans authentification
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/property-info`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+
   if (response.status === 404) {
     throw new Error('Projet non trouvé');
   }

@@ -16,6 +16,7 @@ from app.schemas.project import (
     ProjectShareCreate,
     ProjectShareResponse,
 )
+from app.schemas.property_info import PropertyInfoUpdate, PropertyInfoResponse
 from app.utils.security import get_current_user, get_user_admin_id
 from app.models import User, Project, ProjectShare, UserRole, PropertyInfo
 
@@ -102,14 +103,14 @@ async def get_project_dev(
     return project
 
 
-@router.delete("/dev/{project_id}", response_model=ProjectResponse)
-async def soft_delete_project_dev(
+@router.put("/dev/{project_id}/property-info", response_model=PropertyInfoResponse)
+async def update_property_info_dev(
     project_id: int,
+    property_data: PropertyInfoUpdate,
     db: Session = Depends(get_db)
 ):
     """
-    [DEV ONLY] Déplace un projet dans la corbeille (soft delete).
-    Le projet sera définitivement supprimé après 15 jours.
+    [DEV ONLY] Met à jour les informations du bien sans authentification.
     À SUPPRIMER avant la mise en production.
     """
     project = db.query(Project).filter(Project.id == project_id).first()
@@ -467,6 +468,87 @@ async def delete_project(
     db.commit()
     db.refresh(project)
     return project
+
+
+# === Routes PropertyInfo ===
+
+@router.get("/{project_id}/property-info", response_model=PropertyInfoResponse)
+async def get_property_info(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Récupère les informations détaillées du bien pour un projet.
+    """
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Projet non trouvé"
+        )
+
+    if not can_read_project(db, current_user, project):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous n'avez pas accès à ce projet"
+        )
+
+    if not project.property_info:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Informations du bien non trouvées"
+        )
+
+    return project.property_info
+
+
+@router.put("/{project_id}/property-info", response_model=PropertyInfoResponse)
+async def update_property_info(
+    project_id: int,
+    property_data: PropertyInfoUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Crée ou met à jour les informations détaillées du bien.
+
+    - **owner_name**: Nom du propriétaire
+    - **occupant_name**: Nom de l'occupant
+    - **construction_year**: Année de construction
+    - **geographic_sector**: Secteur géographique
+    - **swot_***: Analyse SWOT (forces, faiblesses, opportunités, menaces)
+    - **notes**: Notes libres
+    """
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Projet non trouvé"
+        )
+
+    if not can_write_project(db, current_user, project):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous n'avez pas le droit de modifier ce projet"
+        )
+
+    # Récupérer ou créer PropertyInfo
+    property_info = project.property_info
+    if not property_info:
+        property_info = PropertyInfo(project_id=project_id)
+        db.add(property_info)
+
+    # Appliquer les modifications
+    update_data = property_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(property_info, field, value)
+
+    db.commit()
+    db.refresh(property_info)
+    return property_info
 
 
 # === Routes de partage ===

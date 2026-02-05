@@ -1,4 +1,5 @@
-import { ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
+import { Header } from "@/app/components/Header";
 import {
   LineChart,
   Line,
@@ -14,6 +15,7 @@ import {
 interface MarketTrendsProps {
   city: string;
   onBack: () => void;
+  onDashboardClick?: () => void;
 }
 
 // Données historiques des 12 derniers mois
@@ -36,7 +38,7 @@ const generateHistoricalData = (city: string) => {
   });
 };
 
-export function MarketTrends({ city, onBack }: MarketTrendsProps) {
+export function MarketTrends({ city, onBack, onDashboardClick }: MarketTrendsProps) {
   const data = generateHistoricalData(city);
   const currentPrice = data[data.length - 1].price;
   const previousPrice = data[0].price;
@@ -60,16 +62,11 @@ export function MarketTrends({ city, onBack }: MarketTrendsProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
+      {/* Header global */}
+      <Header onLogoClick={onBack} onDashboardClick={onDashboardClick} />
+
+      {/* Titre de la page */}
       <div className="bg-white border-b border-gray-200 px-8 py-6">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span>Retour</span>
-        </button>
-        
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl text-gray-900 mb-2">
@@ -79,7 +76,7 @@ export function MarketTrends({ city, onBack }: MarketTrendsProps) {
               Évolution du prix moyen au m² sur les 12 derniers mois
             </p>
           </div>
-          
+
           <div className="bg-blue-50 border border-blue-200 rounded-lg px-6 py-4 text-right">
             <p className="text-sm text-gray-600 mb-1">Prix actuel</p>
             <p className="text-3xl text-blue-900 mb-2">

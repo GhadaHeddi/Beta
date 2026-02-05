@@ -10,7 +10,7 @@ import { TrashPage } from "@/app/components/TrashPage";
 import type { Project } from "@/types/project";
 
 interface CurrentProject {
-  id: number | null;
+  id: number;
   title: string;
   address: string;
   propertyType: string;
@@ -22,8 +22,8 @@ export default function App() {
   const [currentProject, setCurrentProject] = useState<CurrentProject | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
-  const handleStartEvaluation = (title: string, address: string, propertyType: string) => {
-    setCurrentProject({ id: null, title, address, propertyType, currentStep: 1 });
+  const handleStartEvaluation = (id: number, title: string, address: string, propertyType: string) => {
+    setCurrentProject({ id, title, address, propertyType, currentStep: 1 });
     setView("evaluation");
   };
 
@@ -78,6 +78,7 @@ export default function App() {
       propertyType={currentProject.propertyType}
       initialStep={currentProject.currentStep}
       onBack={handleBackToHome}
+      onDashboardClick={handleOpenDashboard}
     />;
   }
 
@@ -91,7 +92,7 @@ export default function App() {
   }
 
   if (view === "market-trends" && selectedCity) {
-    return <MarketTrends city={selectedCity} onBack={handleBackToHome} />;
+    return <MarketTrends city={selectedCity} onBack={handleBackToHome} onDashboardClick={handleOpenDashboard} />;
   }
 
   return (
@@ -104,7 +105,7 @@ export default function App() {
           <div className="h-[40vh]">
             <ProjectCreation onStartEvaluation={handleStartEvaluation} />
           </div>
-          
+
           <div className="flex-1 overflow-auto">
             <RecentProjects onProjectClick={handleOpenProject} />
           </div>

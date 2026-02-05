@@ -1,5 +1,7 @@
 # Dockerfile Frontend React + Vite - ORYEM
-FROM node:20-alpine
+FROM quay.io/fedora/nodejs-20:latest
+
+USER root
 
 # Répertoire de travail
 WORKDIR /app
