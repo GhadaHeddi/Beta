@@ -23,12 +23,11 @@ interface DocumentTab {
   icon: string;
 }
 
-// Mapping des numéros d'étape vers les identifiants d'onglets
 const stepToTab: Record<number, string> = {
   1: "informations",
   2: "comparison",
-  3: "Analysis",
-  4: "Simulation",
+  3: "analysis",
+  4: "simulation",
   5: "finalisation",
 };
 
@@ -72,11 +71,9 @@ export function EvaluationProcess({
   const [activeTab, setActiveTab] = useState<string>(
     stepToTab[initialStep] || "informations"
   );
-  const [documentTabs, setDocumentTabs] = useState<
-    DocumentTab[]
-  >([]);
 
-  // État des données du formulaire Informations (persisté lors de la navigation)
+  const [documentTabs, setDocumentTabs] = useState<DocumentTab[]>([]);
+
   const [informationsFormData, setInformationsFormData] = useState<FormData>({
     title: projectTitle,
     address: projectAddress,
@@ -87,6 +84,7 @@ export function EvaluationProcess({
     materials: "",
     geographicSector: "",
   });
+
   const [informationsNotes, setInformationsNotes] = useState("");
   const [informationsSwot, setInformationsSwot] = useState<SwotAnalysis>({
     strengths: "",
@@ -94,61 +92,58 @@ export function EvaluationProcess({
     opportunities: "",
     threats: "",
   });
-  const [informationsDocuments, setInformationsDocuments] = useState<Document[]>([]);
 
-  // Suivi de la complétion des étapes (✓ affiché uniquement si sauvegardé)
-  const [stepsCompletion, setStepsCompletion] = useState<Record<string, boolean>>({
-    informations: false,
-    comparison: false,
-    Analysis: false,
-    Simulation: false,
-    finalisation: false,
-  });
+  const [informationsDocuments, setInformationsDocuments] = useState<Document[]>(
+    []
+  );
+
+  const [stepsCompletion, setStepsCompletion] = useState<Record<string, boolean>>(
+    {
+      informations: false,
+      comparison: false,
+      analysis: false,
+      simulation: false,
+      finalisation: false,
+    }
+  );
 
   const handleOpenDocument = (doc: Document) => {
-    // Vérifier si le document est déjà ouvert
-    const exists = documentTabs.find(
-      (tab) => tab.id === `doc-${doc.id}`,
-    );
+    const tabId = `doc-${doc.id}`;
+
+    const exists = documentTabs.find((tab) => tab.id === tabId);
     if (exists) {
-      setActiveTab(`doc-${doc.id}`);
+      setActiveTab(tabId);
       return;
     }
 
-    // Limiter à 3 onglets de documents
     if (documentTabs.length >= 3) {
-      alert(
-        "Maximum 3 documents peuvent être ouverts simultanément",
-      );
+      alert("Maximum 3 documents peuvent être ouverts simultanément");
       return;
     }
 
-    // Ajouter le nouvel onglet
     const newTab: DocumentTab = {
-      id: `doc-${doc.id}`,
+      id: tabId,
       name: doc.name,
       icon: doc.icon,
     };
-    setDocumentTabs([...documentTabs, newTab]);
-    setActiveTab(`doc-${doc.id}`);
+
+    setDocumentTabs((prev) => [...prev, newTab]);
+    setActiveTab(tabId);
   };
 
   const handleCloseDocumentTab = (tabId: string) => {
-    setDocumentTabs(
-      documentTabs.filter((tab) => tab.id !== tabId),
-    );
-    // Si l'onglet fermé était actif, retourner à Informations
+    setDocumentTabs((prev) => prev.filter((tab) => tab.id !== tabId));
+
     if (activeTab === tabId) {
       setActiveTab("informations");
     }
   };
 
   const renderStep = () => {
-    // Vérifier si c'est un onglet de document
+    // Onglet document dynamique
     if (activeTab.startsWith("doc-")) {
-      const docTab = documentTabs.find(
-        (tab) => tab.id === activeTab,
-      );
+      const docTab = documentTabs.find((tab) => tab.id === activeTab);
+
       if (docTab) {
         return (
           <DocumentViewer
@@ -159,7 +154,6 @@ export function EvaluationProcess({
       }
     }
 
-    // Onglets standards
     switch (activeTab) {
       case "informations":
         return (
@@ -173,18 +167,25 @@ export function EvaluationProcess({
             onNotesChange={setInformationsNotes}
             onSwotChange={setInformationsSwot}
             onDocumentsChange={setInformationsDocuments}
-            onStepComplete={() => setStepsCompletion(prev => ({ ...prev, informations: true }))}
+            onStepComplete={() =>
+              setStepsCompletion((prev) => ({ ...prev, informations: true }))
+            }
             onOpenDocument={handleOpenDocument}
           />
         );
+
       case "comparison":
         return <ComparisonStep />;
-      case "Analysis":
+
+      case "analysis":
         return <AnalysisStep />;
-      case "Simulation":
+
+      case "simulation":
         return <SimulationStep />;
+
       case "finalisation":
         return <FinalisationStep />;
+
       default:
         return (
           <InformationsStep
@@ -197,7 +198,9 @@ export function EvaluationProcess({
             onNotesChange={setInformationsNotes}
             onSwotChange={setInformationsSwot}
             onDocumentsChange={setInformationsDocuments}
-            onStepComplete={() => setStepsCompletion(prev => ({ ...prev, informations: true }))}
+            onStepComplete={() =>
+              setStepsCompletion((prev) => ({ ...prev, informations: true }))
+            }
             onOpenDocument={handleOpenDocument}
           />
         );
@@ -206,12 +209,12 @@ export function EvaluationProcess({
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* En-tête fixe */}
+      {/* Header */}
       <div className="sticky top-0 z-50">
         <Header onLogoClick={onBack} onDashboardClick={onDashboardClick} />
       </div>
 
-      {/* Barre d'onglets avec barre de progression intégrée */}
+      {/* Tabs + progress */}
       <div className="sticky top-24 z-40 bg-gray-50">
         <EvaluationTabs
           activeTab={activeTab}
@@ -224,16 +227,12 @@ export function EvaluationProcess({
         />
       </div>
 
-      {/* Contenu principal */}
+      {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Zone de contenu (75%) */}
         <div className="flex-1 overflow-auto">
-          <div className="max-w-7.5xl mx-auto px-8 py-6">
-            {renderStep()}
-          </div>
+          <div className="max-w-7.5xl mx-auto px-8 py-6">{renderStep()}</div>
         </div>
 
-        {/* Assistant IA (25%) */}
         <div className="w-[25%] flex-shrink-0">
           <AIAssistant />
         </div>
