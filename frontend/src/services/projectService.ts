@@ -110,3 +110,56 @@ export async function createProjectAuth(data: ProjectCreateData): Promise<Projec
 
   return response.json();
 }
+
+/**
+ * Récupère un projet par son ID (mode dev, sans auth)
+ * TODO: Remplacer par getProjectByIdAuth en production
+ */
+export async function getProjectById(projectId: number): Promise<Project> {
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}`, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Projet non trouvé');
+    }
+    throw new Error(`Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Récupère un projet par son ID avec authentification (production)
+ */
+export async function getProjectByIdAuth(projectId: number): Promise<Project> {
+  const token = localStorage.getItem('access_token');
+
+  if (!token) {
+    throw new Error('Non authentifié');
+  }
+
+  const response = await fetch(`${API_BASE}/api/projects/${projectId}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (response.status === 401) {
+    throw new Error('Session expirée');
+  }
+
+  if (response.status === 404) {
+    throw new Error('Projet non trouvé');
+  }
+
+  if (!response.ok) {
+    throw new Error(`Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}

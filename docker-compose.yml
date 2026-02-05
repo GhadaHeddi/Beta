@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Base de données PostgreSQL avec PostGIS
   db:
@@ -24,7 +22,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.
+      dockerfile: Dockerfile
       args:
         PROXY: ${PROXY}
     container_name: oryem_backend

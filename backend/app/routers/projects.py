@@ -71,6 +71,34 @@ async def create_project_dev(
     return project
 
 
+@router.get("/dev/{project_id}", response_model=ProjectWithDetails)
+async def get_project_dev(
+    project_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    [DEV ONLY] Récupère un projet par son ID sans authentification.
+    À SUPPRIMER avant la mise en production.
+    """
+    project = (
+        db.query(Project)
+        .options(
+            joinedload(Project.user),
+            joinedload(Project.property_info)
+        )
+        .filter(Project.id == project_id)
+        .first()
+    )
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Projet non trouvé"
+        )
+
+    return project
+
+
 # === Helpers pour les permissions ===
 
 def get_team_user_ids(db: Session, user: User) -> List[int]:

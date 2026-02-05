@@ -6,14 +6,34 @@ import { OffersPanel } from "@/app/components/OffersPanel";
 import { EvaluationProcess } from "@/app/components/evaluation/EvaluationProcess";
 import { Dashboard } from "@/app/components/Dashboard";
 import { MarketTrends } from "@/app/components/MarketTrends";
+import type { Project } from "@/types/project";
+
+interface CurrentProject {
+  id: number | null;
+  title: string;
+  address: string;
+  propertyType: string;
+  currentStep: number;
+}
 
 export default function App() {
   const [view, setView] = useState<"home" | "evaluation" | "dashboard" | "market-trends">("home");
-  const [currentProject, setCurrentProject] = useState<{ title: string; address: string; propertyType: string } | null>(null);
+  const [currentProject, setCurrentProject] = useState<CurrentProject | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
   const handleStartEvaluation = (title: string, address: string, propertyType: string) => {
-    setCurrentProject({ title, address, propertyType });
+    setCurrentProject({ id: null, title, address, propertyType, currentStep: 1 });
+    setView("evaluation");
+  };
+
+  const handleOpenProject = (project: Project) => {
+    setCurrentProject({
+      id: project.id,
+      title: project.title,
+      address: project.address,
+      propertyType: project.property_type,
+      currentStep: project.current_step,
+    });
     setView("evaluation");
   };
 
@@ -37,10 +57,12 @@ export default function App() {
   };
 
   if (view === "evaluation" && currentProject) {
-    return <EvaluationProcess 
-      projectTitle={currentProject.title} 
+    return <EvaluationProcess
+      projectId={currentProject.id}
+      projectTitle={currentProject.title}
       projectAddress={currentProject.address}
       propertyType={currentProject.propertyType}
+      initialStep={currentProject.currentStep}
       onBack={handleBackToHome}
     />;
   }
@@ -70,7 +92,7 @@ export default function App() {
           </div>
           
           <div className="flex-1 overflow-auto">
-            <RecentProjects />
+            <RecentProjects onProjectClick={handleOpenProject} />
           </div>
         </div>
 

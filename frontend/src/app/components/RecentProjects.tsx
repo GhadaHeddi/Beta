@@ -44,7 +44,11 @@ function getProgressColor(progress: number): string {
   return "bg-blue-100 text-blue-800";
 }
 
-export function RecentProjects() {
+interface RecentProjectsProps {
+  onProjectClick?: (project: Project) => void;
+}
+
+export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
   const { projects, loading, error, refetch } = useRecentProjects();
   const [progressFilter, setProgressFilter] = useState<"all" | "0-50" | "50-75" | "75-99" | "completed">("all");
 
@@ -243,9 +247,16 @@ export function RecentProjects() {
                     const progress = calculateProgress(project.current_step);
                     const progressColor = getProgressColor(progress);
 
+                    const handleRowClick = () => {
+                      if (onProjectClick) {
+                        onProjectClick(project);
+                      }
+                    };
+
                     return (
                       <tr
                         key={project.id}
+                        onClick={handleRowClick}
                         className={`border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors ${
                           index % 2 === 1
                             ? "bg-gray-50"
@@ -290,10 +301,21 @@ export function RecentProjects() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-end gap-2">
-                            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRowClick();
+                              }}
+                              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="Modifier le projet"
+                            >
                               <Edit2 className="w-4 h-4 text-gray-600" />
                             </button>
-                            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <button
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="Partager le projet"
+                            >
                               <Share2 className="w-4 h-4 text-gray-600" />
                             </button>
                           </div>
