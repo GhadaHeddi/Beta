@@ -41,6 +41,36 @@ async def list_all_projects_dev(db: Session = Depends(get_db)):
     return projects
 
 
+@router.post("/dev/create", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+async def create_project_dev(
+    project_data: ProjectCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    [DEV ONLY] Crée un projet sans authentification.
+    Utilise le premier utilisateur de la base par défaut.
+    À SUPPRIMER avant la mise en production.
+    """
+    # Récupérer le premier utilisateur disponible
+    default_user = db.query(User).first()
+    if not default_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Aucun utilisateur en base. Créez d'abord un utilisateur."
+        )
+
+    project = Project(
+        user_id=default_user.id,
+        title=project_data.title,
+        address=project_data.address,
+        property_type=project_data.property_type,
+    )
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    return project
+
+
 # === Helpers pour les permissions ===
 
 def get_team_user_ids(db: Session, user: User) -> List[int]:

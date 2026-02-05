@@ -24,7 +24,9 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.
+      args:
+        PROXY: ${PROXY}
     container_name: oryem_backend
     restart: unless-stopped
     ports:
