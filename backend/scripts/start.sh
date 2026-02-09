@@ -2,7 +2,6 @@
 set -e
 
 echo "✅ Base de données prête"
-
 echo "🔄 Application des migrations Alembic..."
 alembic upgrade head
 echo "✅ Migrations appliquées"
