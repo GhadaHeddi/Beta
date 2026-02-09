@@ -6,18 +6,15 @@ import {
   Building,
   Info,
   Eye,
-  MapPin,
-  Map,
   Clipboard,
   Send,
   Save,
   Check,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
+  AlertTriangle,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { savePropertyInfo } from "@/services/projectService";
+import { AddressMap } from "@/app/components/AddressMap";
 
 interface Document {
   id: string;
@@ -80,6 +77,70 @@ export function InformationsStep({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  // État pour la validation d'adresse
+  const [isAddressValidated, setIsAddressValidated] = useState(false);
+  const [isValidatingAddress, setIsValidatingAddress] = useState(true);
+  const [addressToValidate, setAddressToValidate] = useState(formData.address);
+
+  // Refs pour le scroll
+  const mapSectionRef = useRef<HTMLDivElement>(null);
+  const addressFieldRef = useRef<HTMLInputElement>(null);
+  const formTopRef = useRef<HTMLDivElement>(null);
+
+  // Scroll vers la carte au chargement initial si l'adresse existe
+  useEffect(() => {
+    if (formData.address && !isAddressValidated && mapSectionRef.current) {
+      // Petit délai pour laisser le composant se rendre
+      const timer = setTimeout(() => {
+        mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // Fonction appelée quand l'utilisateur confirme l'adresse
+  const handleConfirmAddress = () => {
+    setIsAddressValidated(true);
+    setIsValidatingAddress(false);
+    // Scroll vers le haut du formulaire
+    formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Fonction appelée quand l'utilisateur veut changer l'adresse
+  const handleChangeAddress = () => {
+    setIsAddressValidated(false);
+    setIsValidatingAddress(false);
+    // Vider l'adresse actuelle
+    onFormDataChange({ ...formData, address: '' });
+    setAddressToValidate('');
+    // Scroll vers le champ d'adresse et focus
+    setTimeout(() => {
+      addressFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      addressFieldRef.current?.focus();
+    }, 100);
+  };
+
+  // Fonction pour revalider une nouvelle adresse saisie
+  const handleRevalidateAddress = () => {
+    if (formData.address.trim()) {
+      setAddressToValidate(formData.address);
+      setIsValidatingAddress(true);
+      // Scroll vers la carte
+      setTimeout(() => {
+        mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  };
+
+  // Fonction appelée quand l'utilisateur déplace le marqueur sur la carte
+  const handleAddressUpdate = (newAddress: string) => {
+    // Mettre à jour l'adresse dans le formulaire
+    onFormDataChange({ ...formData, address: newAddress });
+    setAddressToValidate(newAddress);
+    // L'adresse n'est plus validée car elle a changé
+    setIsAddressValidated(false);
+  };
+
   const handleAddFileClick = () => {
     const fileInput = document.getElementById("file-upload") as HTMLInputElement;
     fileInput?.click();
@@ -141,6 +202,7 @@ export function InformationsStep({
 
     if (!formData.title.trim()) newErrors.title = "Le titre est obligatoire";
     if (!formData.address.trim()) newErrors.address = "L'adresse est obligatoire";
+    if (!isAddressValidated) newErrors.address = "Veuillez valider l'adresse sur la carte";
     if (!formData.ownerName.trim())
       newErrors.ownerName = "Le nom du propriétaire est obligatoire";
     if (!formData.propertyType)
@@ -166,7 +228,11 @@ export function InformationsStep({
 
   const handleSave = async () => {
     if (!validateForm()) {
-      alert("Veuillez remplir tous les champs obligatoires");
+      if (!isAddressValidated && formData.address) {
+        // Scroll vers la carte si l'adresse n'est pas validée
+        mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      alert("Veuillez remplir tous les champs obligatoires et valider l'adresse");
       return;
     }
 
@@ -287,7 +353,7 @@ export function InformationsStep({
 
       {/* Colonne droite - Formulaire (75%) */}
       <div className="flex-1">
-        <div className="bg-white rounded-lg border border-gray-200">
+        <div ref={formTopRef} className="bg-white rounded-lg border border-gray-200">
           <div className="bg-blue-600 px-6 py-4 rounded-t-lg">
             <div className="flex items-center gap-3">
               <Building className="w-6 h-6 text-white" />
@@ -296,6 +362,32 @@ export function InformationsStep({
           </div>
 
           <div className="p-6">
+            {/* Bandeau d'avertissement si adresse non validée */}
+            {!isAddressValidated && formData.address && (
+              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-amber-800 font-medium">Adresse non validée</p>
+                  <p className="text-amber-700 text-sm mt-1">
+                    Veuillez vérifier et confirmer l'adresse sur la carte ci-dessous avant de continuer.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Bandeau de succès si adresse validée */}
+            {isAddressValidated && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+                <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-green-800 font-medium">Adresse confirmée</p>
+                  <p className="text-green-700 text-sm mt-1">
+                    L'adresse "{formData.address}" a été validée.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -330,23 +422,45 @@ export function InformationsStep({
                 <div>
                   <label className="block text-sm text-gray-700 mb-2">
                     Adresse <span className="text-red-500">*</span>
+                    {isAddressValidated && (
+                      <span className="ml-2 text-green-600 text-xs font-medium">✓ Validée</span>
+                    )}
                   </label>
-                  <input
-                    type="text"
-                    value={formData.address}
-                    required
-                    onChange={(e) => {
-                      onFormDataChange({
-                        ...formData,
-                        address: e.target.value,
-                      });
-                      if (errors.address) setErrors({ ...errors, address: "" });
-                    }}
-                    placeholder="Ex: 123 Rue des Immeubles, 75001 Paris"
-                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.address ? "border-red-500" : "border-gray-300"
-                    }`}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      ref={addressFieldRef}
+                      type="text"
+                      value={formData.address}
+                      required
+                      onChange={(e) => {
+                        onFormDataChange({
+                          ...formData,
+                          address: e.target.value,
+                        });
+                        if (errors.address) setErrors({ ...errors, address: "" });
+                        // Si l'adresse change après validation, invalider
+                        if (isAddressValidated && e.target.value !== addressToValidate) {
+                          setIsAddressValidated(false);
+                        }
+                      }}
+                      placeholder="Ex: 123 Rue des Immeubles, 75001 Paris"
+                      className={`flex-1 px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.address ? "border-red-500 bg-red-50" :
+                        !isAddressValidated && formData.address ? "border-amber-500 bg-amber-50" :
+                        isAddressValidated ? "border-green-500 bg-green-50" :
+                        "border-gray-300"
+                      }`}
+                    />
+                    {!isAddressValidated && formData.address && !isValidatingAddress && (
+                      <button
+                        type="button"
+                        onClick={handleRevalidateAddress}
+                        className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
+                      >
+                        Vérifier
+                      </button>
+                    )}
+                  </div>
                   {errors.address && (
                     <p className="text-red-500 text-xs mt-1">
                       {errors.address}
@@ -519,10 +633,16 @@ export function InformationsStep({
 
               <button
                 type="submit"
-                disabled={isSaving}
-                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSaving || !isAddressValidated}
+                className={`w-full px-6 py-3 text-white rounded-lg transition-colors text-base font-medium disabled:cursor-not-allowed ${
+                  isAddressValidated
+                    ? "bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                    : "bg-gray-400 cursor-not-allowed"
+                }`}
               >
-                {isSaving ? "Enregistrement..." : "Enregistrer les informations"}
+                {isSaving ? "Enregistrement..." :
+                 !isAddressValidated ? "Veuillez d'abord valider l'adresse" :
+                 "Enregistrer les informations"}
               </button>
             </form>
 
@@ -575,46 +695,32 @@ export function InformationsStep({
               </div>
             </div>
 
-            {/* Carte */}
-            <div className="mt-6 bg-white rounded-lg border border-gray-200 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Map className="w-6 h-6 text-blue-600" />
-                <h3 className="text-lg text-gray-900">Localisation du bien</h3>
-              </div>
-
-              <div className="relative w-full h-[400px] bg-gray-100 rounded-lg overflow-hidden">
-                <img
-                  src="https://arc-anglerfish-eu-central-1-prod-leparisien.s3.amazonaws.com/public/5UAWECLJVFOXQS6RPEGA3XXU3M.jpg"
-                  alt="Carte"
-                  className="w-full h-full object-cover"
+            {/* Carte - Section de validation d'adresse */}
+            <div ref={mapSectionRef} className="mt-6">
+              {addressToValidate ? (
+                <AddressMap
+                  address={addressToValidate}
+                  onConfirm={handleConfirmAddress}
+                  onChangeAddress={handleChangeAddress}
+                  onAddressUpdate={handleAddressUpdate}
+                  isValidating={isValidatingAddress}
+                  isConfirmed={isAddressValidated}
                 />
-
-                <div className="absolute inset-0 bg-white/10"></div>
-
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-                  <MapPin className="w-10 h-10 text-red-600 fill-red-600 drop-shadow-lg animate-bounce" />
-                  <div className="mt-2 bg-white px-3 py-2 rounded-lg shadow-lg border-2 border-red-600">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {formData.title || "Votre bien"}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      {formData.address || "Adresse non renseignée"}
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <Building className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Aucune adresse à afficher
+                    </h3>
+                    <p className="text-gray-500 max-w-md">
+                      Veuillez saisir une adresse dans le formulaire ci-dessus pour la visualiser sur la carte.
                     </p>
                   </div>
                 </div>
-
-                <div className="absolute top-4 right-4 flex flex-col gap-2">
-                  <button className="p-2 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors border border-gray-200">
-                    <ZoomIn className="w-5 h-5 text-gray-700" />
-                  </button>
-                  <button className="p-2 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors border border-gray-200">
-                    <ZoomOut className="w-5 h-5 text-gray-700" />
-                  </button>
-                  <button className="p-2 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors border border-gray-200">
-                    <Maximize2 className="w-5 h-5 text-gray-700" />
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* SWOT */}
