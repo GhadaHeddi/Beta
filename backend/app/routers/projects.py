@@ -18,6 +18,7 @@ from app.schemas.project import (
     FiltersMetadata,
     ProjectsPaginatedResponse,
 )
+from app.schemas.property_info import PropertyInfoUpdate, PropertyInfoResponse
 from app.schemas.user import UserBrief
 from app.models.project import PropertyType
 from app.utils.security import get_current_user, get_user_admin_id
