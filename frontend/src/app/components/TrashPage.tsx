@@ -14,7 +14,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
-import { getTrashProjects, restoreProject, permanentDeleteProject } from "@/services/projectService";
+import { getTrashProjectsAuth, restoreProjectAuth, permanentDeleteProjectAuth } from "@/services/projectService";
 import type { Project, PropertyType } from "@/types/project";
 
 // Mapping des types de propriete
@@ -66,7 +66,7 @@ export function TrashPage({ onBack, isAdmin = false }: TrashPageProps) {
     setLoading(true);
     setError(null);
     try {
-      const data = await getTrashProjects();
+      const data = await getTrashProjectsAuth();
       setProjects(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors du chargement");
@@ -96,7 +96,7 @@ export function TrashPage({ onBack, isAdmin = false }: TrashPageProps) {
     setActionError(null);
 
     try {
-      await restoreProject(projectToRestore.id);
+      await restoreProjectAuth(projectToRestore.id);
       setProjectToRestore(null);
       fetchProjects();
     } catch (err) {
@@ -113,7 +113,7 @@ export function TrashPage({ onBack, isAdmin = false }: TrashPageProps) {
     setActionError(null);
 
     try {
-      await permanentDeleteProject(projectToDelete.id);
+      await permanentDeleteProjectAuth(projectToDelete.id);
       setProjectToDelete(null);
       fetchProjects();
     } catch (err) {

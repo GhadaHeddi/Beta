@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { CreateValueModal } from "@/app/components/CreateValueModal";
-import { createProject } from "@/services/projectService";
+import { createProjectAuth } from "@/services/projectService";
 import type { PropertyType } from "@/types/project";
 
 interface ProjectCreationProps {
@@ -31,7 +31,7 @@ export function ProjectCreation({
 
     try {
       // Appel API pour créer le projet en BDD
-      const newProject = await createProject({
+      const newProject = await createProjectAuth({
         title,
         address,
         property_type: propertyType as PropertyType,
