@@ -11,16 +11,21 @@ import { AIAssistant } from "@/app/components/evaluation/AIAssistant";
 
 interface Document {
   id: string;
+  serverId?: number;
   name: string;
   size: string;
   date: string;
   icon: string;
+  url?: string;
+  mimeType?: string;
 }
 
 interface DocumentTab {
   id: string;
   name: string;
   icon: string;
+  url?: string;
+  mimeType?: string;
 }
 
 const stepToTab: Record<number, string> = {
@@ -125,6 +130,8 @@ export function EvaluationProcess({
       id: tabId,
       name: doc.name,
       icon: doc.icon,
+      url: doc.url,
+      mimeType: doc.mimeType,
     };
 
     setDocumentTabs((prev) => [...prev, newTab]);
@@ -149,6 +156,8 @@ export function EvaluationProcess({
           <DocumentViewer
             documentName={docTab.name}
             documentIcon={docTab.icon}
+            documentUrl={docTab.url}
+            documentMimeType={docTab.mimeType}
           />
         );
       }

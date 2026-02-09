@@ -1,10 +1,14 @@
 """
 Routes des projets - CRUD avec gestion des permissions de partage
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, func, desc, asc
 from typing import List, Optional
+from pathlib import Path
+import os
+import shutil
 from app.database import get_db
 from app.schemas.project import (
     ProjectCreate,
@@ -22,8 +26,10 @@ from app.schemas.property_info import PropertyInfoUpdate, PropertyInfoResponse
 from app.schemas.user import UserBrief
 from app.models.project import PropertyType
 from app.utils.security import get_current_user, get_user_admin_id
-from app.models import User, Project, ProjectShare, UserRole, PropertyInfo
+from app.models import User, Project, ProjectShare, UserRole, PropertyInfo, Document, DocumentType
 from app.models.project_share import SharePermission
+
+UPLOAD_DIR = Path("/app/uploaded_files")
 
 router = APIRouter(prefix="/projects", tags=["Projets"])
 
@@ -1275,3 +1281,132 @@ async def permanent_delete_project(
     # Supprimer le projet définitivement
     db.delete(project)
     db.commit()
+
+
+# ============================================================
+# ENDPOINTS FICHIERS - Upload et téléchargement
+# ============================================================
+
+def _get_mime_document_type(mime_type: str) -> DocumentType:
+    """Détermine le type de document à partir du MIME type"""
+    if mime_type and mime_type.startswith("image/"):
+        return DocumentType.PHOTO
+    return DocumentType.OTHER
+
+
+@router.post("/dev/{project_id}/files/upload")
+def upload_file_dev(
+    project_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """Upload un fichier pour un projet (endpoint dev sans auth)"""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Projet non trouvé")
+
+    # Créer le dossier du projet
+    project_dir = UPLOAD_DIR / f"project_{project_id}"
+    project_dir.mkdir(parents=True, exist_ok=True)
+
+    # Sauvegarder le fichier
+    file_path = project_dir / file.filename
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Déterminer le type et la taille
+    file_size = os.path.getsize(file_path)
+    doc_type = _get_mime_document_type(file.content_type)
+
+    # Enregistrer en base
+    document = Document(
+        project_id=project_id,
+        name=file.filename,
+        file_path=str(file_path),
+        file_type=doc_type,
+        mime_type=file.content_type,
+        size=file_size,
+    )
+    db.add(document)
+    db.commit()
+    db.refresh(document)
+
+    return {
+        "id": document.id,
+        "name": document.name,
+        "mime_type": document.mime_type,
+        "size": document.size,
+        "uploaded_at": document.uploaded_at.isoformat(),
+    }
+
+
+@router.get("/dev/{project_id}/files")
+def list_files_dev(
+    project_id: int,
+    db: Session = Depends(get_db),
+):
+    """Liste les fichiers d'un projet (endpoint dev sans auth)"""
+    documents = db.query(Document).filter(Document.project_id == project_id).all()
+    return [
+        {
+            "id": doc.id,
+            "name": doc.name,
+            "mime_type": doc.mime_type,
+            "size": doc.size,
+            "uploaded_at": doc.uploaded_at.isoformat(),
+        }
+        for doc in documents
+    ]
+
+
+@router.get("/dev/{project_id}/files/{file_id}")
+def get_file_dev(
+    project_id: int,
+    file_id: int,
+    db: Session = Depends(get_db),
+):
+    """Télécharge/affiche un fichier (endpoint dev sans auth)"""
+    document = (
+        db.query(Document)
+        .filter(Document.id == file_id, Document.project_id == project_id)
+        .first()
+    )
+    if not document:
+        raise HTTPException(status_code=404, detail="Fichier non trouvé")
+
+    file_path = Path(document.file_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Fichier physique non trouvé")
+
+    return FileResponse(
+        path=str(file_path),
+        media_type=document.mime_type,
+        headers={"Content-Disposition": f'inline; filename="{document.name}"'},
+    )
+
+
+@router.delete("/dev/{project_id}/files/{file_id}")
+def delete_file_dev(
+    project_id: int,
+    file_id: int,
+    db: Session = Depends(get_db),
+):
+    """Supprime un fichier (endpoint dev sans auth)"""
+    document = (
+        db.query(Document)
+        .filter(Document.id == file_id, Document.project_id == project_id)
+        .first()
+    )
+    if not document:
+        raise HTTPException(status_code=404, detail="Fichier non trouvé")
+
+    # Supprimer le fichier physique
+    file_path = Path(document.file_path)
+    if file_path.exists():
+        file_path.unlink()
+
+    # Supprimer de la base
+    db.delete(document)
+    db.commit()
+
+    return {"detail": "Fichier supprimé"}

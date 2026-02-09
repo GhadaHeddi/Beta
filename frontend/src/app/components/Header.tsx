@@ -32,10 +32,6 @@ interface HeaderProps {
 }
 
 export function Header({ onLogoClick, onDashboardClick, onTrashClick, searchQuery = "", onSearch }: HeaderProps) {
-  // Verification synchrone du token pour eviter le flash de la page de connexion
-  const hasToken = !!localStorage.getItem("access_token");
-
-export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderProps) {
   // Vérification synchrone du token pour éviter le flash de la page de connexion
   const hasToken = !!localStorage.getItem("access_token");
 
