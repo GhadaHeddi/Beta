@@ -37,15 +37,18 @@ export function Header({ onLogoClick, onDashboardClick, searchQuery = "", onSear
 }
 
 export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderProps) {
->>>>>>> main
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(true);
+  // Vérification synchrone du token pour éviter le flash de la page de connexion
+  const hasToken = !!localStorage.getItem("access_token");
+
+  const [isCheckingAuth, setIsCheckingAuth] = useState(hasToken); // En cours de vérification si token présent
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(!hasToken); // N'afficher que si pas de token
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isAddConsultantModalOpen, setIsAddConsultantModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(3);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(hasToken ? localStorage.getItem("access_token") : null);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
 
@@ -55,6 +58,8 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
     if (token) {
       setAccessToken(token);
       fetchCurrentUser(token);
+    } else {
+      setIsCheckingAuth(false);
     }
   }, []);
 
@@ -82,6 +87,8 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
       localStorage.removeItem("access_token");
       setIsAuthenticated(false);
       setIsLoginModalOpen(true);
+    } finally {
+      setIsCheckingAuth(false);
     }
   };
 
@@ -337,7 +344,7 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
       </header>
 
       <LoginModal
-        isOpen={isLoginModalOpen}
+        isOpen={isLoginModalOpen && !isCheckingAuth}
         onLogin={handleLogin}
         error={loginError}
       />
