@@ -110,9 +110,8 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
         const data = await response.json();
         const token = data.access_token;
         localStorage.setItem("access_token", token);
-        setAccessToken(token);
-        await fetchCurrentUser(token);
-        setUnreadCount(3);
+        // Recharger la page pour réinitialiser tous les états avec le nouvel utilisateur
+        window.location.reload();
       } else {
         const errorData = await response.json();
         setLoginError(errorData.detail || "Email ou mot de passe incorrect");

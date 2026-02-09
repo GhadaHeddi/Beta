@@ -33,6 +33,10 @@ services:
       DATABASE_URL: postgresql://oryem_user:oryem_password@db:5432/oryem_db
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-this-in-production}
       DEBUG: ${DEBUG:-True}
+      ADMIN_EMAIL: admin@oryem.com
+      ADMIN_PASSWORD: admin123
+      ADMIN_FIRST_NAME: Admin
+      ADMIN_LAST_NAME: ORYEM
     volumes:
       - ./backend:/app
       - ./uploads:/app/uploads

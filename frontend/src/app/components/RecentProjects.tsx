@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useRecentProjects } from "@/hooks/useProjects";
-import { deleteProject } from "@/services/projectService";
+import { deleteProjectAuth } from "@/services/projectService";
 import { ShareModal } from "@/app/components/ShareModal";
 import type { Project, ProjectStatus, PropertyType } from "@/types/project";
 
@@ -78,7 +78,7 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
     setDeleteError(null);
 
     try {
-      await deleteProject(projectToDelete.id);
+      await deleteProjectAuth(projectToDelete.id);
       setProjectToDelete(null);
       refetch();
     } catch (err) {
