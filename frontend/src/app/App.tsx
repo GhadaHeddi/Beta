@@ -6,6 +6,7 @@ import { OffersPanel } from "@/app/components/OffersPanel";
 import { EvaluationProcess } from "@/app/components/evaluation/EvaluationProcess";
 import { Dashboard } from "@/app/components/Dashboard";
 import { MarketTrends } from "@/app/components/MarketTrends";
+import { SearchResultsPage } from "@/app/components/SearchResultsPage";
 import type { Project } from "@/types/project";
 
 interface CurrentProject {
@@ -17,9 +18,10 @@ interface CurrentProject {
 }
 
 export default function App() {
-  const [view, setView] = useState<"home" | "evaluation" | "dashboard" | "market-trends">("home");
+  const [view, setView] = useState<"home" | "evaluation" | "dashboard" | "market-trends" | "search-results">("home");
   const [currentProject, setCurrentProject] = useState<CurrentProject | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleStartEvaluation = (title: string, address: string, propertyType: string) => {
     setCurrentProject({ id: null, title, address, propertyType, currentStep: 1 });
@@ -51,9 +53,16 @@ export default function App() {
     setView("home");
   };
 
-  const handleViewMarketTrends = (city: string) => { NoePI-Esisar
+  const handleViewMarketTrends = (city: string) => {
     setSelectedCity(city);
     setView("market-trends");
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      setView("search-results");
+    }
   };
 
   if (view === "evaluation" && currentProject) {
@@ -81,9 +90,32 @@ export default function App() {
     return <MarketTrends city={selectedCity} onBack={handleBackToHome} onDashboardClick={handleOpenDashboard} />;
   }
 
+  if (view === "search-results") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Header
+          onLogoClick={handleBackToHome}
+          onDashboardClick={handleOpenDashboard}
+          searchQuery={searchQuery}
+          onSearch={handleSearch}
+        />
+        <SearchResultsPage
+          initialQuery={searchQuery}
+          onProjectClick={handleOpenProject}
+          onQueryChange={setSearchQuery}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header onLogoClick={handleBackToHome} onDashboardClick={handleOpenDashboard} />
+      <Header
+        onLogoClick={handleBackToHome}
+        onDashboardClick={handleOpenDashboard}
+        searchQuery={searchQuery}
+        onSearch={handleSearch}
+      />
       
       <div className="flex-1 flex overflow-hidden">
         {/* Zone principale (78%) */}
