@@ -26,10 +26,18 @@ interface UserData {
 interface HeaderProps {
   onLogoClick?: () => void;
   onDashboardClick?: () => void;
+<<<<<<< 7-f2-06-recherche-full-text-sur-projets-et-filtres
+  searchQuery?: string;
+  onSearch?: (query: string) => void;
+}
+
+export function Header({ onLogoClick, onDashboardClick, searchQuery = "", onSearch }: HeaderProps) {
+=======
   onTrashClick?: () => void;
 }
 
 export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderProps) {
+>>>>>>> main
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isInboxOpen, setIsInboxOpen] = useState(false);
@@ -206,14 +214,24 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
           </button>
 
           <div className="flex-1 max-w-2xl">
-            <div className="relative">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (searchQuery.trim()) {
+                  onSearch?.(searchQuery);
+                }
+              }}
+              className="relative"
+            >
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => onSearch?.(e.currentTarget.value)}
                 placeholder="Rechercher un projet, une adresse..."
                 className="w-full pl-12 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-            </div>
+            </form>
           </div>
 
           {!isAuthenticated ? (
