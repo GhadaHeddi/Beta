@@ -6,6 +6,7 @@ import { OffersPanel } from "@/app/components/OffersPanel";
 import { EvaluationProcess } from "@/app/components/evaluation/EvaluationProcess";
 import { Dashboard } from "@/app/components/Dashboard";
 import { MarketTrends } from "@/app/components/MarketTrends";
+import { TrashPage } from "@/app/components/TrashPage";
 import type { Project } from "@/types/project";
 
 interface CurrentProject {
@@ -17,7 +18,7 @@ interface CurrentProject {
 }
 
 export default function App() {
-  const [view, setView] = useState<"home" | "evaluation" | "dashboard" | "market-trends">("home");
+  const [view, setView] = useState<"home" | "evaluation" | "dashboard" | "market-trends" | "trash">("home");
   const [currentProject, setCurrentProject] = useState<CurrentProject | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
@@ -56,6 +57,19 @@ export default function App() {
     setView("market-trends");
   };
 
+  const handleOpenTrash = () => {
+    setView("trash");
+  };
+
+  if (view === "trash") {
+    return (
+      <>
+        <Header onLogoClick={handleBackToHome} onDashboardClick={handleOpenDashboard} onTrashClick={handleOpenTrash} />
+        <TrashPage onBack={handleBackToHome} isAdmin={false} />
+      </>
+    );
+  }
+
   if (view === "evaluation" && currentProject) {
     return <EvaluationProcess
       projectId={currentProject.id}
@@ -71,7 +85,7 @@ export default function App() {
   if (view === "dashboard") {
     return (
       <>
-        <Header onLogoClick={handleBackToHome} onDashboardClick={handleCloseDashboard} />
+        <Header onLogoClick={handleBackToHome} onDashboardClick={handleCloseDashboard} onTrashClick={handleOpenTrash} />
         <Dashboard onBack={handleCloseDashboard} />
       </>
     );
@@ -83,7 +97,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header onLogoClick={handleBackToHome} onDashboardClick={handleOpenDashboard} />
+      <Header onLogoClick={handleBackToHome} onDashboardClick={handleOpenDashboard} onTrashClick={handleOpenTrash} />
 
       <div className="flex-1 flex overflow-hidden">
         {/* Zone principale (78%) */}

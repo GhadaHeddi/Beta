@@ -26,9 +26,10 @@ interface UserData {
 interface HeaderProps {
   onLogoClick?: () => void;
   onDashboardClick?: () => void;
+  onTrashClick?: () => void;
 }
 
-export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
+export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderProps) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isInboxOpen, setIsInboxOpen] = useState(false);
@@ -109,9 +110,8 @@ export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
         const data = await response.json();
         const token = data.access_token;
         localStorage.setItem("access_token", token);
-        setAccessToken(token);
-        await fetchCurrentUser(token);
-        setUnreadCount(3);
+        // Recharger la page pour réinitialiser tous les états avec le nouvel utilisateur
+        window.location.reload();
       } else {
         const errorData = await response.json();
         setLoginError(errorData.detail || "Email ou mot de passe incorrect");
@@ -181,6 +181,13 @@ export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
   const handleDashboardClick = () => {
     if (onDashboardClick) {
       onDashboardClick();
+    }
+  };
+
+  const handleTrashClick = () => {
+    setIsProfileOpen(false);
+    if (onTrashClick) {
+      onTrashClick();
     }
   };
 
@@ -298,6 +305,7 @@ export function Header({ onLogoClick, onDashboardClick }: HeaderProps) {
                   onClose={() => setIsProfileOpen(false)}
                   onLogout={handleLogoutClick}
                   onAddConsultant={handleOpenAddConsultant}
+                  onTrashClick={handleTrashClick}
                   userName={userData.name}
                   userEmail={userData.email}
                   userRole={userData.role}

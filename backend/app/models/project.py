@@ -38,6 +38,7 @@ class Project(Base):
     current_step = Column(Integer, default=1)  # Étape actuelle (1-5)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = Column(DateTime, nullable=True, default=None)  # Soft delete - corbeille
 
     # Relations
     user = relationship("User", back_populates="projects")
