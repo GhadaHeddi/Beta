@@ -17,6 +17,15 @@ interface CurrentProject {
   currentStep: number;
 }
 
+// Composant wrapper pour les transitions de page
+function PageTransition({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`animate-fade-in ${className}`}>
+      {children}
+    </div>
+  );
+}
+
 export default function App() {
   const [view, setView] = useState<"home" | "evaluation" | "dashboard" | "market-trends" | "search-results">("home");
   const [currentProject, setCurrentProject] = useState<CurrentProject | null>(null);
@@ -64,30 +73,50 @@ export default function App() {
       setView("search-results");
     }
   };
+  const handleOpenTrash = () => {
+    setView("trash");
+  };
+
+  if (view === "trash") {
+    return (
+      <PageTransition key="trash">
+        <Header onLogoClick={handleBackToHome} onDashboardClick={handleOpenDashboard} onTrashClick={handleOpenTrash} />
+        <TrashPage onBack={handleBackToHome} isAdmin={false} />
+      </PageTransition>
+    );
+  }
 
   if (view === "evaluation" && currentProject) {
-    return <EvaluationProcess
-      projectId={currentProject.id}
-      projectTitle={currentProject.title}
-      projectAddress={currentProject.address}
-      propertyType={currentProject.propertyType}
-      initialStep={currentProject.currentStep}
-      onBack={handleBackToHome}
-      onDashboardClick={handleOpenDashboard}
-    />;
+    return (
+      <PageTransition key="evaluation">
+        <EvaluationProcess
+          projectId={currentProject.id}
+          projectTitle={currentProject.title}
+          projectAddress={currentProject.address}
+          propertyType={currentProject.propertyType}
+          initialStep={currentProject.currentStep}
+          onBack={handleBackToHome}
+          onDashboardClick={handleOpenDashboard}
+        />
+      </PageTransition>
+    );
   }
 
   if (view === "dashboard") {
     return (
-      <>
+      <PageTransition key="dashboard">
         <Header onLogoClick={handleBackToHome} onDashboardClick={handleCloseDashboard} onTrashClick={handleOpenTrash} />
         <Dashboard onBack={handleCloseDashboard} />
-      </>
+      </PageTransition>
     );
   }
 
   if (view === "market-trends" && selectedCity) {
-    return <MarketTrends city={selectedCity} onBack={handleBackToHome} onDashboardClick={handleOpenDashboard} />;
+    return (
+      <PageTransition key="market-trends">
+        <MarketTrends city={selectedCity} onBack={handleBackToHome} onDashboardClick={handleOpenDashboard} />
+      </PageTransition>
+    );
   }
 
   if (view === "search-results") {
@@ -109,7 +138,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <PageTransition key="home" className="min-h-screen bg-gray-50 flex flex-col">
       <Header
         onLogoClick={handleBackToHome}
         onDashboardClick={handleOpenDashboard}
@@ -134,6 +163,6 @@ export default function App() {
           <OffersPanel onViewMarketTrends={handleViewMarketTrends} />
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }
