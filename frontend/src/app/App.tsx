@@ -10,7 +10,7 @@ import { SearchResultsPage } from "@/app/components/SearchResultsPage";
 import type { Project } from "@/types/project";
 
 interface CurrentProject {
-  id: number | null;
+  id: number;
   title: string;
   address: string;
   propertyType: string;
@@ -23,8 +23,8 @@ export default function App() {
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleStartEvaluation = (title: string, address: string, propertyType: string) => {
-    setCurrentProject({ id: null, title, address, propertyType, currentStep: 1 });
+  const handleStartEvaluation = (id: number, title: string, address: string, propertyType: string) => {
+    setCurrentProject({ id, title, address, propertyType, currentStep: 1 });
     setView("evaluation");
   };
 
@@ -80,7 +80,7 @@ export default function App() {
   if (view === "dashboard") {
     return (
       <>
-        <Header onLogoClick={handleBackToHome} onDashboardClick={handleCloseDashboard} />
+        <Header onLogoClick={handleBackToHome} onDashboardClick={handleCloseDashboard} onTrashClick={handleOpenTrash} />
         <Dashboard onBack={handleCloseDashboard} />
       </>
     );
@@ -123,7 +123,7 @@ export default function App() {
           <div className="h-[40vh]">
             <ProjectCreation onStartEvaluation={handleStartEvaluation} />
           </div>
-          
+
           <div className="flex-1 overflow-auto">
             <RecentProjects onProjectClick={handleOpenProject} />
           </div>

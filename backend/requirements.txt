@@ -12,7 +12,7 @@ geoalchemy2==0.15.2  # Pour PostGIS
 # Authentication & Security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-bcrypt==4.2.1
+bcrypt==3.2.2
 
 # Settings & Environment
 pydantic==2.10.3

@@ -20,6 +20,7 @@ interface EvaluationTabsProps {
   projectAddress: string;
   documentTabs?: DocumentTab[];
   onCloseDocumentTab?: (tabId: string) => void;
+  stepsCompletion?: Record<string, boolean>;
 }
 
 export function EvaluationTabs({
@@ -29,6 +30,7 @@ export function EvaluationTabs({
   projectAddress,
   documentTabs = [],
   onCloseDocumentTab,
+  stepsCompletion,
 }: EvaluationTabsProps) {
   const tabs: Tab[] = [
     { id: "informations", label: "Informations" },
@@ -58,7 +60,7 @@ export function EvaluationTabs({
         <div className="flex flex-col w-full h-full">
           {/* ================== HAUT : barre de progression ================== */}
           <div className="w-full shrink-0">
-            <ProgressBar activeTab={activeTab} />
+            <ProgressBar activeTab={activeTab} stepsCompletion={stepsCompletion} />
           </div>
 
           {/* ================== BAS : onglets ================== */}

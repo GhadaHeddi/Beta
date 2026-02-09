@@ -1,4 +1,3 @@
-# Dockerfile Frontend React + Vite - ORYEM
 FROM node:20-alpine
 
 # Répertoire de travail
