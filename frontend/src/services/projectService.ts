@@ -11,7 +11,7 @@ import type {
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 /**
- * Données pour créer un nouveau projet
+ * Donnees pour creer un nouveau projet
  */
 export interface ProjectCreateData {
   title: string;
@@ -21,13 +21,13 @@ export interface ProjectCreateData {
 
 
 /**
- * Version avec authentification (à utiliser en production)
+ * Version avec authentification (a utiliser en production)
  */
 export async function getRecentProjectsAuth(): Promise<Project[]> {
   const token = localStorage.getItem('access_token');
 
   if (!token) {
-    throw new Error('Non authentifié');
+    throw new Error('Non authentifie');
   }
 
   const response = await fetch(`${API_BASE}/api/projects/`, {
@@ -38,7 +38,7 @@ export async function getRecentProjectsAuth(): Promise<Project[]> {
   });
 
   if (response.status === 401) {
-    throw new Error('Session expirée');
+    throw new Error('Session expiree');
   }
 
   if (!response.ok) {
@@ -51,13 +51,13 @@ export async function getRecentProjectsAuth(): Promise<Project[]> {
 }
 
 /**
- * Crée un nouveau projet avec authentification (production)
+ * Cree un nouveau projet avec authentification (production)
  */
 export async function createProjectAuth(data: ProjectCreateData): Promise<Project> {
   const token = localStorage.getItem('access_token');
 
   if (!token) {
-    throw new Error('Non authentifié');
+    throw new Error('Non authentifie');
   }
 
   const response = await fetch(`${API_BASE}/api/projects/`, {
@@ -70,7 +70,7 @@ export async function createProjectAuth(data: ProjectCreateData): Promise<Projec
   });
 
   if (response.status === 401) {
-    throw new Error('Session expirée');
+    throw new Error('Session expiree');
   }
 
   if (!response.ok) {
@@ -83,13 +83,13 @@ export async function createProjectAuth(data: ProjectCreateData): Promise<Projec
 
 
 /**
- * Récupère un projet par son ID avec authentification (production)
+ * Recupere un projet par son ID avec authentification (production)
  */
 export async function getProjectByIdAuth(projectId: number): Promise<Project> {
   const token = localStorage.getItem('access_token');
 
   if (!token) {
-    throw new Error('Non authentifié');
+    throw new Error('Non authentifie');
   }
 
   const response = await fetch(`${API_BASE}/api/projects/${projectId}`, {
@@ -100,11 +100,11 @@ export async function getProjectByIdAuth(projectId: number): Promise<Project> {
   });
 
   if (response.status === 401) {
-    throw new Error('Session expirée');
+    throw new Error('Session expiree');
   }
 
   if (response.status === 404) {
-    throw new Error('Projet non trouvé');
+    throw new Error('Projet non trouve');
   }
 
   if (!response.ok) {
@@ -121,7 +121,7 @@ export async function deleteProjectAuth(projectId: number): Promise<Project> {
   const token = localStorage.getItem('access_token');
 
   if (!token) {
-    throw new Error('Non authentifié');
+    throw new Error('Non authentifie');
   }
 
   const response = await fetch(`${API_BASE}/api/projects/${projectId}`, {
@@ -133,11 +133,11 @@ export async function deleteProjectAuth(projectId: number): Promise<Project> {
   });
 
   if (response.status === 401) {
-    throw new Error('Session expirée');
+    throw new Error('Session expiree');
   }
 
   if (response.status === 404) {
-    throw new Error('Projet non trouvé');
+    throw new Error('Projet non trouve');
   }
 
   if (!response.ok) {
@@ -155,7 +155,7 @@ export async function restoreProjectAuth(projectId: number): Promise<Project> {
   const token = localStorage.getItem('access_token');
 
   if (!token) {
-    throw new Error('Non authentifié');
+    throw new Error('Non authentifie');
   }
 
   const response = await fetch(`${API_BASE}/api/projects/${projectId}/restore`, {
@@ -167,11 +167,23 @@ export async function restoreProjectAuth(projectId: number): Promise<Project> {
   });
 
   if (response.status === 401) {
-    throw new Error('Session expirée');
+    throw new Error('Session expiree');
   }
+
+  if (response.status === 404) {
+    throw new Error('Projet non trouve');
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
 }
-/*
- * Interface pour les données du bien immobilier
+
+/**
+ * Interface pour les donnees du bien immobilier
  */
 export interface PropertyInfoData {
   owner_name?: string;
@@ -195,11 +207,11 @@ export interface PropertyInfoData {
  * Utilise l'endpoint de dev (sans auth) pour les tests.
  * TODO: Remplacer par /{project_id}/property-info avec authentification en production.
  * @param projectId ID du projet
- * @param data Données du bien à sauvegarder
+ * @param data Donnees du bien a sauvegarder
  */
 export async function savePropertyInfo(projectId: number, data: PropertyInfoData): Promise<PropertyInfoData> {
   // Mode dev : endpoint sans authentification
-  const response = await fetch(`${API_BASE}/api/${projectId}/property-info`, {
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/property-info`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json'
@@ -208,7 +220,7 @@ export async function savePropertyInfo(projectId: number, data: PropertyInfoData
   });
 
   if (response.status === 404) {
-    throw new Error('Projet non trouvé');
+    throw new Error('Projet non trouve');
   }
 
   if (!response.ok) {
@@ -220,15 +232,15 @@ export async function savePropertyInfo(projectId: number, data: PropertyInfoData
 }
 
 /**
- * Récupère les projets dans la corbeille avec authentification (production)
- * - Admin : voit tous les projets supprimés de son équipe
- * - Consultant : voit uniquement ses propres projets supprimés
+ * Recupere les projets dans la corbeille avec authentification (production)
+ * - Admin : voit tous les projets supprimes de son equipe
+ * - Consultant : voit uniquement ses propres projets supprimes
  */
 export async function getTrashProjectsAuth(): Promise<Project[]> {
   const token = localStorage.getItem('access_token');
 
   if (!token) {
-    throw new Error('Non authentifié');
+    throw new Error('Non authentifie');
   }
 
   const response = await fetch(`${API_BASE}/api/projects/trash`, {
@@ -239,7 +251,7 @@ export async function getTrashProjectsAuth(): Promise<Project[]> {
   });
 
   if (response.status === 401) {
-    throw new Error('Session expirée');
+    throw new Error('Session expiree');
   }
 
   if (!response.ok) {
@@ -250,14 +262,14 @@ export async function getTrashProjectsAuth(): Promise<Project[]> {
 }
 
 /**
- * Supprime définitivement un projet avec authentification (production)
- * Le projet doit être dans la corbeille.
+ * Supprime definitivement un projet avec authentification (production)
+ * Le projet doit etre dans la corbeille.
  */
 export async function permanentDeleteProjectAuth(projectId: number): Promise<void> {
   const token = localStorage.getItem('access_token');
 
   if (!token) {
-    throw new Error('Non authentifié');
+    throw new Error('Non authentifie');
   }
 
   const response = await fetch(`${API_BASE}/api/projects/${projectId}/permanent`, {
@@ -269,11 +281,11 @@ export async function permanentDeleteProjectAuth(projectId: number): Promise<voi
   });
 
   if (response.status === 401) {
-    throw new Error('Session expirée');
+    throw new Error('Session expiree');
   }
 
   if (response.status === 404) {
-    throw new Error('Projet non trouvé');
+    throw new Error('Projet non trouve');
   }
 
   if (!response.ok) {
@@ -317,7 +329,7 @@ export async function getAvailableUsersForShare(projectId: number, search: strin
   const token = localStorage.getItem('access_token');
 
   if (!token) {
-    throw new Error('Non authentifié');
+    throw new Error('Non authentifie');
   }
 
   const params = new URLSearchParams();
@@ -331,7 +343,7 @@ export async function getAvailableUsersForShare(projectId: number, search: strin
   });
 
   if (response.status === 401) {
-    throw new Error('Session expirée');
+    throw new Error('Session expiree');
   }
 
   if (!response.ok) {
@@ -342,13 +354,13 @@ export async function getAvailableUsersForShare(projectId: number, search: strin
 }
 
 /**
- * Récupère la liste des partages d'un projet
+ * Recupere la liste des partages d'un projet
  */
 export async function getProjectShares(projectId: number): Promise<ProjectShare[]> {
   const token = localStorage.getItem('access_token');
 
   if (!token) {
-    throw new Error('Non authentifié');
+    throw new Error('Non authentifie');
   }
 
   const response = await fetch(`${API_BASE}/api/projects/${projectId}/shares`, {
@@ -359,7 +371,7 @@ export async function getProjectShares(projectId: number): Promise<ProjectShare[
   });
 
   if (response.status === 401) {
-    throw new Error('Session expirée');
+    throw new Error('Session expiree');
   }
 
   if (!response.ok) {
@@ -369,11 +381,100 @@ export async function getProjectShares(projectId: number): Promise<ProjectShare[
   return response.json();
 }
 
+/**
+ * Partage un projet avec un utilisateur
+ */
+export async function shareProject(projectId: number, data: ShareCreateData): Promise<ProjectShare> {
+  const token = localStorage.getItem('access_token');
+
+  if (!token) {
+    throw new Error('Non authentifie');
+  }
+
+  const response = await fetch(`${API_BASE}/api/projects/${projectId}/shares`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+
+  if (response.status === 401) {
+    throw new Error('Session expiree');
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Modifie les permissions d'un partage
+ */
+export async function updateProjectShare(projectId: number, userId: number, permission: SharePermission): Promise<ProjectShare> {
+  const token = localStorage.getItem('access_token');
+
+  if (!token) {
+    throw new Error('Non authentifie');
+  }
+
+  const response = await fetch(`${API_BASE}/api/projects/${projectId}/shares/${userId}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ permission })
+  });
+
+  if (response.status === 401) {
+    throw new Error('Session expiree');
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Supprime un partage
+ */
+export async function removeProjectShare(projectId: number, userId: number): Promise<void> {
+  const token = localStorage.getItem('access_token');
+
+  if (!token) {
+    throw new Error('Non authentifie');
+  }
+
+  const response = await fetch(`${API_BASE}/api/projects/${projectId}/shares/${userId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (response.status === 401) {
+    throw new Error('Session expiree');
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+}
 
 // === Fonctions pour le filtrage et la recherche ===
 
 /**
- * Construit la query string à partir des paramètres de filtrage
+ * Construit la query string a partir des parametres de filtrage
  */
 function buildQueryString(
   filters: Partial<ProjectFilters>,
@@ -383,7 +484,7 @@ function buildQueryString(
 ): string {
   const params = new URLSearchParams();
 
-  // Paramètres de recherche
+  // Parametres de recherche
   if (filters.search) {
     params.append('search', filters.search);
   }
@@ -403,7 +504,7 @@ function buildQueryString(
     params.append('consultant_id', String(filters.consultantId));
   }
 
-  // Plage d'années de construction
+  // Plage d'annees de construction
   if (filters.constructionYearMin) {
     params.append('construction_year_min', String(filters.constructionYearMin));
   }
@@ -419,7 +520,7 @@ function buildQueryString(
   params.append('page', String(pagination.page));
   params.append('page_size', String(pagination.pageSize));
 
-  // Métadonnées
+  // Metadonnees
   if (includeMetadata) {
     params.append('include_metadata', 'true');
   }
@@ -428,7 +529,7 @@ function buildQueryString(
 }
 
 /**
- * Récupère les projets avec filtrage, tri et pagination (mode dev)
+ * Recupere les projets avec filtrage, tri et pagination (mode dev)
  */
 export async function getProjectsWithFilters(
   filters: Partial<ProjectFilters>,
@@ -446,99 +547,45 @@ export async function getProjectsWithFilters(
 
   if (!response.ok) {
     throw new Error(`Erreur serveur (${response.status})`);
-      }
-
-  return response.json();
-}
-/**
- * Partage un projet avec un utilisateur
- */
-export async function shareProject(projectId: number, data: ShareCreateData): Promise<ProjectShare> {
-  const token = localStorage.getItem('access_token');
-
-  if (!token) {
-    throw new Error('Non authentifié');
-  }
-
-  const response = await fetch(`${API_BASE}/api/projects/${projectId}/shares`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data)
-  });
-
-  if (response.status === 401) {
-    throw new Error('Session expirée');
-  }
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
   }
 
   return response.json();
 }
 
 /**
- * Modifie les permissions d'un partage
- */
-export async function updateProjectShare(projectId: number, userId: number, permission: SharePermission): Promise<ProjectShare> {
-  const token = localStorage.getItem('access_token');
-
-  if (!token) {
-    throw new Error('Non authentifié');
-  }
-
-  const response = await fetch(`${API_BASE}/api/projects/${projectId}/shares/${userId}`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ permission })
-  });
-
-  if (response.status === 401) {
-    throw new Error('Session expirée');
-  }
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
-  }
-
-  return response.json();
-}
-
-/**
- * Récupère les métadonnées des filtres (mode dev)
+ * Recupere les metadonnees des filtres (mode dev)
  */
 export async function getFiltersMetadata(): Promise<FiltersMetadata> {
   const response = await fetch(`${API_BASE}/api/projects/dev/filters/metadata`, {
     headers: {
-            'Content-Type': 'application/json'
+      'Content-Type': 'application/json'
     }
   });
-    if (!response.ok) {
+
+  if (!response.ok) {
     throw new Error(`Erreur serveur (${response.status})`);
   }
 
   return response.json();
 }
- /**
- * Supprime un partage
+
+/**
+ * Recherche des projets avec authentification
  */
-export async function removeProjectShare(projectId: number, userId: number): Promise<void> {
+export async function searchProjectsAuth(
+  filters: Partial<ProjectFilters>,
+  sort: ProjectSort,
+  pagination: ProjectPagination
+): Promise<ProjectsResponse> {
   const token = localStorage.getItem('access_token');
 
   if (!token) {
-    throw new Error('Non authentifié');
+    throw new Error('Non authentifie');
   }
 
-  const response = await fetch(`${API_BASE}/api/projects/${projectId}/shares/${userId}`, {
-    method: 'DELETE',
+  const queryString = buildQueryString(filters, sort, pagination, false);
+
+  const response = await fetch(`${API_BASE}/api/projects/?${queryString}`, {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -546,11 +593,76 @@ export async function removeProjectShare(projectId: number, userId: number): Pro
   });
 
   if (response.status === 401) {
-    throw new Error('Session expirée');
+    throw new Error('Session expiree');
   }
 
   if (!response.ok) {
+    throw new Error(`Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+// === Fonctions pour les fichiers ===
+
+export interface UploadedFile {
+  id: number;
+  name: string;
+  mime_type: string;
+  size: number;
+  uploaded_at: string;
+}
+
+/**
+ * Upload un fichier pour un projet
+ */
+export async function uploadProjectFile(projectId: number, file: File): Promise<UploadedFile> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/files/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+    throw new Error(errorData.detail || `Erreur upload (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Liste les fichiers d'un projet
+ */
+export async function getProjectFiles(projectId: number): Promise<UploadedFile[]> {
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/files`);
+
+  if (!response.ok) {
+    throw new Error(`Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Retourne l'URL pour afficher/telecharger un fichier
+ */
+export function getFileUrl(projectId: number, fileId: number): string {
+  return `${API_BASE}/api/projects/dev/${projectId}/files/${fileId}`;
+}
+
+/**
+ * Supprime un fichier d'un projet
+ */
+export async function deleteProjectFile(projectId: number, fileId: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/files/${fileId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur suppression (${response.status})`);
   }
 }

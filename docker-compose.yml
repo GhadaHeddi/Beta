@@ -40,6 +40,7 @@ services:
     volumes:
       - ./backend:/app
       - ./uploads:/app/uploads
+      - uploaded_files:/app/uploaded_files
     depends_on:
       db:
         condition: service_healthy
@@ -66,6 +67,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  uploaded_files:
     driver: local
 
 networks:

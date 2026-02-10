@@ -36,7 +36,7 @@ export function CreateValueModal({ isOpen, onClose, onCreate, isLoading = false,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Overlay semi-transparent avec flou */}
+      {/* Overlay */}
       <div
         className="absolute inset-0 bg-black/50"
         onClick={handleClose}

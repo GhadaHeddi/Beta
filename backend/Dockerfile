@@ -15,12 +15,6 @@ ENV HTTPS_PROXY=${PROXY}
 ENV http_proxy=${PROXY}
 ENV https_proxy=${PROXY}
 
-# Proxy pour le build (sera fourni via --build-arg)
-ARG HTTP_PROXY
-ARG HTTPS_PROXY
-ENV http_proxy=$HTTP_PROXY
-ENV https_proxy=$HTTPS_PROXY
-
 # Répertoire de travail
 WORKDIR /app
 

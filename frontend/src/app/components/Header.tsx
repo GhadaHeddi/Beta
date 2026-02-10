@@ -20,6 +20,7 @@ interface HeaderProps {
   searchQuery?: string;
   onSearch?: (query: string) => void;
   onTrashClick?: () => void;
+
 }
 
 export function Header({ onLogoClick, onDashboardClick, searchQuery = "", onTrashClick, onSearch }: HeaderProps) {
@@ -72,10 +73,10 @@ export function Header({ onLogoClick, onDashboardClick, searchQuery = "", onTras
 
       if (response.ok) {
         setIsAddConsultantModalOpen(false);
-        alert("Consultant créé avec succès !");
+        alert("Consultant cree avec succes !");
       } else {
         const errorData = await response.json();
-        alert(errorData.detail || "Erreur lors de la création du consultant");
+        alert(errorData.detail || "Erreur lors de la creation du consultant");
       }
     } catch (error) {
       console.error("Error creating consultant:", error);

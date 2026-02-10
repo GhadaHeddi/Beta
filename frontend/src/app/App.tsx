@@ -21,6 +21,15 @@ interface CurrentProject {
   currentStep: number;
 }
 
+// Composant wrapper pour les transitions de page
+function PageTransition({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`animate-fade-in ${className}`}>
+      {children}
+    </div>
+  );
+}
+
 export default function App() {
   const { isAuthenticated, isAuthLoading, login } = useAuth();
   const [view, setView] = useState<"home" | "evaluation" | "dashboard" | "market-trends" | "search-results"| "trash">("home");
