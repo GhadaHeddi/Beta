@@ -13,6 +13,7 @@ from app.services.user import (
     get_consultants_by_admin,
     create_consultant,
     delete_consultant,
+    update_user,
     get_admin_for_user,
 )
 
@@ -28,5 +29,6 @@ __all__ = [
     "get_consultants_by_admin",
     "create_consultant",
     "delete_consultant",
+    "update_user",
     "get_admin_for_user",
 ]

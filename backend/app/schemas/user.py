@@ -23,6 +23,14 @@ class ConsultantCreate(UserBase):
     password: str
 
 
+class UserUpdate(BaseModel):
+    """Schéma pour la mise à jour du profil utilisateur"""
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+
+
 # === Schémas de réponse ===
 
 class UserResponse(UserBase):

@@ -10,6 +10,8 @@ interface UserData {
   last_name: string;
   role: string;
   avatar_url?: string;
+  phone?: string;
+  created_at?: string;
 }
 
 interface AuthContextType {
@@ -19,6 +21,7 @@ interface AuthContextType {
   accessToken: string | null;
   login: (email: string, password: string) => Promise<string | null>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -97,6 +100,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    if (accessToken) {
+      await fetchCurrentUser(accessToken);
+    }
+  }, [accessToken, fetchCurrentUser]);
+
   const logout = useCallback(() => {
     localStorage.removeItem("access_token");
     setAccessToken(null);
@@ -106,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, isAuthLoading, currentUser, accessToken, login, logout }}
+      value={{ isAuthenticated, isAuthLoading, currentUser, accessToken, login, logout, refreshUser }}
     >
       {children}
     </AuthContext.Provider>

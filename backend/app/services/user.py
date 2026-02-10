@@ -82,6 +82,16 @@ def delete_consultant(db: Session, consultant_id: int, admin_id: int) -> bool:
     return True
 
 
+def update_user(db: Session, user: User, update_data: dict) -> User:
+    """Met à jour les champs d'un utilisateur"""
+    for field, value in update_data.items():
+        if hasattr(user, field):
+            setattr(user, field, value)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 def get_admin_for_user(db: Session, user: User) -> Optional[User]:
     """
     Récupère l'admin associé à un utilisateur.
