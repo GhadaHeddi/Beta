@@ -1,10 +1,14 @@
 """
 Routes des projets - CRUD avec gestion des permissions de partage
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
-from typing import List
+from sqlalchemy import or_, func, desc, asc
+from typing import List, Optional
+from pathlib import Path
+import os
+import shutil
 from datetime import datetime
 from app.database import get_db
 from app.schemas.project import (
@@ -16,35 +20,244 @@ from app.schemas.project import (
     ProjectShareCreate,
     ProjectShareUpdate,
     ProjectShareResponse,
+    FiltersMetadata,
+    ProjectsPaginatedResponse,
 )
+from app.schemas.user import UserBrief
+from app.models.project import PropertyType
 from app.schemas.property_info import PropertyInfoUpdate, PropertyInfoResponse
 from app.utils.security import get_current_user, get_user_admin_id
-from app.models import User, Project, ProjectShare, UserRole, PropertyInfo
+from app.models import User, Project, ProjectShare, UserRole, PropertyInfo, Document, DocumentType
 from app.models.project_share import SharePermission
+
+UPLOAD_DIR = Path("/app/uploaded_files")
 
 router = APIRouter(prefix="/projects", tags=["Projets"])
 
 
 # === Endpoint temporaire de test (sans authentification) ===
 
-@router.get("/dev/all", response_model=List[ProjectWithDetails])
-async def list_all_projects_dev(db: Session = Depends(get_db)):
+def _get_filters_metadata(
+    db: Session,
+    search: Optional[str] = None,
+    city: Optional[str] = None,
+    consultant_id: Optional[int] = None,
+    construction_year_min: Optional[int] = None,
+    construction_year_max: Optional[int] = None,
+) -> FiltersMetadata:
     """
-    [DEV ONLY] Liste tous les projets sans authentification.
-    Exclut les projets dans la corbeille (deleted_at IS NOT NULL).
+    Helper pour construire les métadonnées des filtres.
+    Les compteurs de types de bien sont calculés sur les résultats filtrés
+    (recherche + autres filtres, mais PAS le filtre de type lui-même).
+    """
+    # Récupérer les villes disponibles (toutes les villes de la base)
+    cities_query = (
+        db.query(PropertyInfo.city)
+        .filter(PropertyInfo.city.isnot(None), PropertyInfo.city != "")
+        .distinct()
+        .all()
+    )
+    available_cities = sorted([c[0] for c in cities_query if c[0]])
+
+    # Récupérer les consultants (tous les utilisateurs pour le mode dev)
+    consultants = db.query(User).all()
+    available_consultants = [
+        UserBrief(
+            id=u.id,
+            email=u.email,
+            first_name=u.first_name,
+            last_name=u.last_name,
+            role=u.role.value
+        )
+        for u in consultants
+    ]
+
+    # Récupérer la plage d'années de construction (toute la base)
+    year_range = (
+        db.query(
+            func.min(PropertyInfo.construction_year),
+            func.max(PropertyInfo.construction_year)
+        )
+        .filter(PropertyInfo.construction_year.isnot(None))
+        .first()
+    )
+    construction_year_range = (
+        (year_range[0], year_range[1]) if year_range and year_range[0] else (None, None)
+    )
+
+    # Construire la query de base pour les compteurs de types
+    # On applique les filtres SAUF le filtre de type pour avoir des compteurs pertinents
+    counts_query = (
+        db.query(Project.property_type, func.count(Project.id))
+        .outerjoin(PropertyInfo, Project.id == PropertyInfo.project_id)
+    )
+
+    # Appliquer la recherche textuelle
+    if search:
+        search_pattern = f"%{search}%"
+        counts_query = counts_query.filter(
+            or_(
+                Project.title.ilike(search_pattern),
+                Project.address.ilike(search_pattern),
+                PropertyInfo.owner_name.ilike(search_pattern)
+            )
+        )
+
+    # Filtrer par ville
+    if city:
+        counts_query = counts_query.filter(PropertyInfo.city.ilike(f"%{city}%"))
+
+    # Filtrer par consultant
+    if consultant_id:
+        counts_query = counts_query.filter(Project.user_id == consultant_id)
+
+    # Filtrer par année de construction
+    if construction_year_min:
+        counts_query = counts_query.filter(PropertyInfo.construction_year >= construction_year_min)
+    if construction_year_max:
+        counts_query = counts_query.filter(PropertyInfo.construction_year <= construction_year_max)
+
+    # Grouper et compter
+    type_counts_result = counts_query.group_by(Project.property_type).all()
+    property_type_counts = {str(t[0].value): t[1] for t in type_counts_result}
+
+    return FiltersMetadata(
+        available_cities=available_cities,
+        available_consultants=available_consultants,
+        construction_year_range=construction_year_range,
+        property_type_counts=property_type_counts
+    )
+
+
+@router.get("/dev/all", response_model=ProjectsPaginatedResponse)
+async def list_all_projects_dev(
+    # Paramètres de recherche
+    search: Optional[str] = Query(None, description="Recherche dans titre, adresse, propriétaire"),
+    # Paramètres de filtrage
+    property_types: Optional[List[PropertyType]] = Query(None, description="Types de bien"),
+    city: Optional[str] = Query(None, description="Ville"),
+    consultant_id: Optional[int] = Query(None, description="ID du consultant créateur"),
+    construction_year_min: Optional[int] = Query(None, description="Année de construction min"),
+    construction_year_max: Optional[int] = Query(None, description="Année de construction max"),
+    # Paramètres de tri
+    sort_by: str = Query("updated_at", regex="^(created_at|updated_at|title|construction_year)$"),
+    sort_order: str = Query("desc", regex="^(asc|desc)$"),
+    # Pagination
+    page: int = Query(1, ge=1, description="Numéro de page"),
+    page_size: int = Query(20, ge=1, le=100, description="Nombre d'éléments par page"),
+    # Métadonnées
+    include_metadata: bool = Query(False, description="Inclure les métadonnées des filtres"),
+    db: Session = Depends(get_db)
+):
+    """
+    [DEV ONLY] Liste tous les projets avec filtrage, tri et pagination.
     À SUPPRIMER avant la mise en production.
     """
-    projects = (
+    # Base query avec jointures
+    query = (
         db.query(Project)
         .options(
             joinedload(Project.user),
             joinedload(Project.property_info)
         )
-        .filter(Project.deleted_at.is_(None))
-        .order_by(Project.updated_at.desc())
-        .all()
+        .outerjoin(PropertyInfo, Project.id == PropertyInfo.project_id)
     )
-    return projects
+
+    # Appliquer la recherche textuelle
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Project.title.ilike(search_pattern),
+                Project.address.ilike(search_pattern),
+                PropertyInfo.owner_name.ilike(search_pattern)
+            )
+        )
+
+    # Filtrer par types de bien
+    if property_types:
+        query = query.filter(Project.property_type.in_(property_types))
+
+    # Filtrer par ville
+    if city:
+        query = query.filter(PropertyInfo.city.ilike(f"%{city}%"))
+
+    # Filtrer par consultant
+    if consultant_id:
+        query = query.filter(Project.user_id == consultant_id)
+
+    # Filtrer par année de construction
+    if construction_year_min:
+        query = query.filter(PropertyInfo.construction_year >= construction_year_min)
+    if construction_year_max:
+        query = query.filter(PropertyInfo.construction_year <= construction_year_max)
+
+    # Compter le total avant pagination
+    total = query.count()
+
+    # Appliquer le tri
+    sort_column_map = {
+        "created_at": Project.created_at,
+        "updated_at": Project.updated_at,
+        "title": Project.title,
+        "construction_year": PropertyInfo.construction_year
+    }
+    sort_column = sort_column_map.get(sort_by, Project.updated_at)
+    order_func = desc if sort_order == "desc" else asc
+    query = query.order_by(order_func(sort_column))
+
+    # Appliquer la pagination
+    offset = (page - 1) * page_size
+    projects = query.offset(offset).limit(page_size).all()
+
+    # Calculer le nombre total de pages
+    total_pages = (total + page_size - 1) // page_size
+
+    # Construire la réponse
+    response = {
+        "projects": projects,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "filters_metadata": None
+    }
+
+    # Inclure les métadonnées si demandé
+    if include_metadata:
+        response["filters_metadata"] = _get_filters_metadata(
+            db,
+            search=search,
+            city=city,
+            consultant_id=consultant_id,
+            construction_year_min=construction_year_min,
+            construction_year_max=construction_year_max,
+        )
+
+    return response
+
+
+@router.get("/dev/filters/metadata", response_model=FiltersMetadata)
+async def get_filters_metadata_dev(
+    search: Optional[str] = Query(None, description="Recherche dans titre, adresse, propriétaire"),
+    city: Optional[str] = Query(None, description="Ville"),
+    consultant_id: Optional[int] = Query(None, description="ID du consultant créateur"),
+    construction_year_min: Optional[int] = Query(None, description="Année de construction min"),
+    construction_year_max: Optional[int] = Query(None, description="Année de construction max"),
+    db: Session = Depends(get_db)
+):
+    """
+    [DEV ONLY] Récupère les métadonnées des filtres.
+    À SUPPRIMER avant la mise en production.
+    """
+    return _get_filters_metadata(
+        db,
+        search=search,
+        city=city,
+        consultant_id=consultant_id,
+        construction_year_min=construction_year_min,
+        construction_year_max=construction_year_max,
+    )
 
 
 @router.post("/dev/create", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -123,16 +336,20 @@ async def update_property_info_dev(
             detail="Projet non trouvé"
         )
 
-    if project.deleted_at is not None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ce projet est déjà dans la corbeille"
-        )
+    # Récupérer ou créer PropertyInfo
+    property_info = project.property_info
+    if not property_info:
+        property_info = PropertyInfo(project_id=project_id)
+        db.add(property_info)
 
-    project.deleted_at = datetime.utcnow()
+    # Appliquer les modifications
+    update_data = property_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(property_info, field, value)
+
     db.commit()
-    db.refresh(project)
-    return project
+    db.refresh(property_info)
+    return property_info
 
 
 @router.get("/dev/trash/all", response_model=List[ProjectWithDetails])
@@ -437,6 +654,56 @@ async def create_project(
     db.commit()
     db.refresh(project)
     return project
+
+
+# === Routes de la corbeille ===
+# IMPORTANT: ces routes statiques doivent être déclarées AVANT /{project_id}
+# sinon FastAPI essaie de convertir "trash" en int → 422
+
+@router.get("/trash", response_model=List[ProjectWithDetails])
+async def list_trash_projects(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Liste les projets dans la corbeille.
+
+    - Admin : voit tous les projets dans la corbeille (de son équipe)
+    - Consultant : voit uniquement ses propres projets supprimés
+    """
+    if current_user.role == UserRole.ADMIN:
+        # Admin : tous les projets supprimés de son équipe
+        team_ids = get_team_user_ids(db, current_user)
+        projects = (
+            db.query(Project)
+            .options(
+                joinedload(Project.user),
+                joinedload(Project.property_info)
+            )
+            .filter(
+                Project.deleted_at.isnot(None),
+                Project.user_id.in_(team_ids)
+            )
+            .order_by(Project.deleted_at.desc())
+            .all()
+        )
+    else:
+        # Consultant : uniquement ses propres projets supprimés
+        projects = (
+            db.query(Project)
+            .options(
+                joinedload(Project.user),
+                joinedload(Project.property_info)
+            )
+            .filter(
+                Project.deleted_at.isnot(None),
+                Project.user_id == current_user.id
+            )
+            .order_by(Project.deleted_at.desc())
+            .all()
+        )
+
+    return projects
 
 
 @router.get("/{project_id}", response_model=ProjectWithOwner)
@@ -946,54 +1213,6 @@ async def remove_project_share(
     db.commit()
 
 
-# === Routes de la corbeille ===
-
-@router.get("/trash", response_model=List[ProjectWithDetails])
-async def list_trash_projects(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Liste les projets dans la corbeille.
-
-    - Admin : voit tous les projets dans la corbeille (de son équipe)
-    - Consultant : voit uniquement ses propres projets supprimés
-    """
-    if current_user.role == UserRole.ADMIN:
-        # Admin : tous les projets supprimés de son équipe
-        team_ids = get_team_user_ids(db, current_user)
-        projects = (
-            db.query(Project)
-            .options(
-                joinedload(Project.user),
-                joinedload(Project.property_info)
-            )
-            .filter(
-                Project.deleted_at.isnot(None),
-                Project.user_id.in_(team_ids)
-            )
-            .order_by(Project.deleted_at.desc())
-            .all()
-        )
-    else:
-        # Consultant : uniquement ses propres projets supprimés
-        projects = (
-            db.query(Project)
-            .options(
-                joinedload(Project.user),
-                joinedload(Project.property_info)
-            )
-            .filter(
-                Project.deleted_at.isnot(None),
-                Project.user_id == current_user.id
-            )
-            .order_by(Project.deleted_at.desc())
-            .all()
-        )
-
-    return projects
-
-
 @router.post("/{project_id}/restore", response_model=ProjectResponse)
 async def restore_project(
     project_id: int,
@@ -1069,3 +1288,132 @@ async def permanent_delete_project(
     # Supprimer le projet définitivement
     db.delete(project)
     db.commit()
+
+
+# ============================================================
+# ENDPOINTS FICHIERS - Upload et téléchargement
+# ============================================================
+
+def _get_mime_document_type(mime_type: str) -> DocumentType:
+    """Détermine le type de document à partir du MIME type"""
+    if mime_type and mime_type.startswith("image/"):
+        return DocumentType.PHOTO
+    return DocumentType.OTHER
+
+
+@router.post("/dev/{project_id}/files/upload")
+def upload_file_dev(
+    project_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """Upload un fichier pour un projet (endpoint dev sans auth)"""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Projet non trouvé")
+
+    # Créer le dossier du projet
+    project_dir = UPLOAD_DIR / f"project_{project_id}"
+    project_dir.mkdir(parents=True, exist_ok=True)
+
+    # Sauvegarder le fichier
+    file_path = project_dir / file.filename
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Déterminer le type et la taille
+    file_size = os.path.getsize(file_path)
+    doc_type = _get_mime_document_type(file.content_type)
+
+    # Enregistrer en base
+    document = Document(
+        project_id=project_id,
+        name=file.filename,
+        file_path=str(file_path),
+        file_type=doc_type,
+        mime_type=file.content_type,
+        size=file_size,
+    )
+    db.add(document)
+    db.commit()
+    db.refresh(document)
+
+    return {
+        "id": document.id,
+        "name": document.name,
+        "mime_type": document.mime_type,
+        "size": document.size,
+        "uploaded_at": document.uploaded_at.isoformat(),
+    }
+
+
+@router.get("/dev/{project_id}/files")
+def list_files_dev(
+    project_id: int,
+    db: Session = Depends(get_db),
+):
+    """Liste les fichiers d'un projet (endpoint dev sans auth)"""
+    documents = db.query(Document).filter(Document.project_id == project_id).all()
+    return [
+        {
+            "id": doc.id,
+            "name": doc.name,
+            "mime_type": doc.mime_type,
+            "size": doc.size,
+            "uploaded_at": doc.uploaded_at.isoformat(),
+        }
+        for doc in documents
+    ]
+
+
+@router.get("/dev/{project_id}/files/{file_id}")
+def get_file_dev(
+    project_id: int,
+    file_id: int,
+    db: Session = Depends(get_db),
+):
+    """Télécharge/affiche un fichier (endpoint dev sans auth)"""
+    document = (
+        db.query(Document)
+        .filter(Document.id == file_id, Document.project_id == project_id)
+        .first()
+    )
+    if not document:
+        raise HTTPException(status_code=404, detail="Fichier non trouvé")
+
+    file_path = Path(document.file_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Fichier physique non trouvé")
+
+    return FileResponse(
+        path=str(file_path),
+        media_type=document.mime_type,
+        headers={"Content-Disposition": f'inline; filename="{document.name}"'},
+    )
+
+
+@router.delete("/dev/{project_id}/files/{file_id}")
+def delete_file_dev(
+    project_id: int,
+    file_id: int,
+    db: Session = Depends(get_db),
+):
+    """Supprime un fichier (endpoint dev sans auth)"""
+    document = (
+        db.query(Document)
+        .filter(Document.id == file_id, Document.project_id == project_id)
+        .first()
+    )
+    if not document:
+        raise HTTPException(status_code=404, detail="Fichier non trouvé")
+
+    # Supprimer le fichier physique
+    file_path = Path(document.file_path)
+    if file_path.exists():
+        file_path.unlink()
+
+    # Supprimer de la base
+    db.delete(document)
+    db.commit()
+
+    return {"detail": "Fichier supprimé"}

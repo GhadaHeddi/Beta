@@ -4,11 +4,13 @@ Schémas Pydantic de l'application ORYEM
 from app.schemas.user import (
     UserBase,
     ConsultantCreate,
+    UserUpdate,
     UserResponse,
     UserBrief,
     Token,
     TokenData,
     LoginRequest,
+    ChangePasswordRequest,
 )
 from app.schemas.project import (
     ProjectBase,
@@ -25,11 +27,13 @@ __all__ = [
     # User schemas
     "UserBase",
     "ConsultantCreate",
+    "UserUpdate",
     "UserResponse",
     "UserBrief",
     "Token",
     "TokenData",
     "LoginRequest",
+    "ChangePasswordRequest",
     # Project schemas
     "ProjectBase",
     "ProjectCreate",

@@ -5,8 +5,8 @@ import {
   ChevronDown,
   LayoutDashboard,
 } from "lucide-react";
-import { useState, useEffect } from "react";
-import { LoginModal } from "@/app/components/LoginModal";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { InboxDropdown } from "@/app/components/InboxDropdown";
 import { ProfileDropdown } from "@/app/components/ProfileDropdown";
 import { LogoutConfirmModal } from "@/app/components/LogoutConfirmModal";
@@ -14,68 +14,23 @@ import { AddConsultantModal } from "@/app/components/AddConsultantModal";
 
 const API_BASE_URL = "http://localhost:8000/api";
 
-interface UserData {
-  id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  role: string;
-  avatar_url?: string;
-}
-
 interface HeaderProps {
   onLogoClick?: () => void;
   onDashboardClick?: () => void;
+  searchQuery?: string;
+  onSearch?: (query: string) => void;
   onTrashClick?: () => void;
+  onProfileClick?: () => void;
+  onSettingsClick?: () => void;
 }
 
-export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderProps) {
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+export function Header({ onLogoClick, onDashboardClick, searchQuery = "", onTrashClick, onProfileClick, onSettingsClick, onSearch }: HeaderProps) {
+  const { isAuthenticated, currentUser, accessToken, logout } = useAuth();
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isAddConsultantModalOpen, setIsAddConsultantModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(3);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [loginError, setLoginError] = useState<string | null>(null);
-
-  // Check for existing token on mount
-  useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      setAccessToken(token);
-      fetchCurrentUser(token);
-    }
-  }, []);
-
-  const fetchCurrentUser = async (token: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        const user = await response.json();
-        setCurrentUser(user);
-        setIsAuthenticated(true);
-        setIsLoginModalOpen(false);
-      } else {
-        // Token invalid, clear it
-        localStorage.removeItem("access_token");
-        setAccessToken(null);
-        setIsAuthenticated(false);
-        setIsLoginModalOpen(true);
-      }
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      localStorage.removeItem("access_token");
-      setIsAuthenticated(false);
-      setIsLoginModalOpen(true);
-    }
-  };
 
   // Compute userData from currentUser
   const userData = currentUser
@@ -93,34 +48,6 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
         initials: "",
         avatar: undefined,
       };
-
-  const handleLogin = async (email: string, password: string) => {
-    setLoginError(null);
-    try {
-      const formData = new FormData();
-      formData.append("username", email);
-      formData.append("password", password);
-
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const token = data.access_token;
-        localStorage.setItem("access_token", token);
-        // Recharger la page pour réinitialiser tous les états avec le nouvel utilisateur
-        window.location.reload();
-      } else {
-        const errorData = await response.json();
-        setLoginError(errorData.detail || "Email ou mot de passe incorrect");
-      }
-    } catch (error) {
-      console.error("Login error:", error);
-      setLoginError("Erreur de connexion au serveur");
-    }
-  };
 
   const handleAddConsultant = async (name: string, email: string, password: string) => {
     if (!accessToken) return;
@@ -147,10 +74,10 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
 
       if (response.ok) {
         setIsAddConsultantModalOpen(false);
-        alert("Consultant créé avec succès !");
+        alert("Consultant cree avec succes !");
       } else {
         const errorData = await response.json();
-        alert(errorData.detail || "Erreur lors de la création du consultant");
+        alert(errorData.detail || "Erreur lors de la creation du consultant");
       }
     } catch (error) {
       console.error("Error creating consultant:", error);
@@ -169,13 +96,9 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
   };
 
   const handleLogoutConfirm = () => {
-    localStorage.removeItem("access_token");
-    setAccessToken(null);
-    setCurrentUser(null);
     setIsLogoutModalOpen(false);
-    setIsAuthenticated(false);
-    setIsLoginModalOpen(true);
     setUnreadCount(0);
+    logout();
   };
 
   const handleDashboardClick = () => {
@@ -188,6 +111,20 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
     setIsProfileOpen(false);
     if (onTrashClick) {
       onTrashClick();
+    }
+  };
+
+  const handleProfileClick = () => {
+    setIsProfileOpen(false);
+    if (onProfileClick) {
+      onProfileClick();
+    }
+  };
+
+  const handleSettingsClick = () => {
+    setIsProfileOpen(false);
+    if (onSettingsClick) {
+      onSettingsClick();
     }
   };
 
@@ -206,24 +143,29 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
           </button>
 
           <div className="flex-1 max-w-2xl">
-            <div className="relative">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (searchQuery.trim()) {
+                  onSearch?.(searchQuery);
+                }
+              }}
+              className="relative"
+            >
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => onSearch?.(e.currentTarget.value)}
                 placeholder="Rechercher un projet, une adresse..."
                 className="w-full pl-12 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-            </div>
+            </form>
           </div>
 
           {!isAuthenticated ? (
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsLoginModalOpen(true)}
-                className="px-6 py-2.5 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors"
-              >
-                Se connecter
-              </button>
+              <span className="text-sm text-gray-500">Non connecté</span>
             </div>
           ) : (
             <div className="flex items-center gap-3">
@@ -306,6 +248,8 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
                   onLogout={handleLogoutClick}
                   onAddConsultant={handleOpenAddConsultant}
                   onTrashClick={handleTrashClick}
+                  onProfileClick={handleProfileClick}
+                  onSettingsClick={handleSettingsClick}
                   userName={userData.name}
                   userEmail={userData.email}
                   userRole={userData.role}
@@ -317,12 +261,6 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
           )}
         </div>
       </header>
-
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onLogin={handleLogin}
-        error={loginError}
-      />
 
       <AddConsultantModal
         isOpen={isAddConsultantModalOpen}

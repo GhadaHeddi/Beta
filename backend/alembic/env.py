@@ -23,6 +23,10 @@ from app.models import (
     Comparable,
     Valuation,
     DVFRecord,
+    Surface,
+    AnalysisResult,
+    Simulation,
+    DocumentGeneration,
 )
 
 # this is the Alembic Config object, which provides
