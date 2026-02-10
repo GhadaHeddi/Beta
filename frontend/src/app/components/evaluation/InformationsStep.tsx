@@ -2,39 +2,19 @@ import {
   Plus,
   Upload,
   FileText,
-  Calendar,
   Trash2,
   Building,
   Info,
   Eye,
-  CheckCircle,
-  AlertTriangle,
-  TrendingUp,
-  Shield,
-  ChevronLeft,
-  ChevronRight,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  Printer,
-  Download,
-  MoreVertical,
-  ChevronDown,
-  ChevronUp,
-  Settings,
-  MapPin,
-  Map,
   Clipboard,
   Send,
   Save,
   Check,
-  X,
-  User,
-  Phone,
-  Mail,
+  AlertTriangle,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { savePropertyInfo } from "@/services/projectService";
+import { AddressMap } from "@/app/components/AddressMap";
 
 interface Document {
   id: string;
@@ -42,6 +22,8 @@ interface Document {
   size: string;
   date: string;
   icon: string;
+  file?: File;
+  url?: string;
 }
 
 interface FormData {
@@ -63,14 +45,11 @@ interface SwotAnalysis {
 }
 
 interface InformationsStepProps {
-  // ID du projet pour la sauvegarde API
   projectId: number;
-  // Données contrôlées par le parent (persistées lors de la navigation)
   formData: FormData;
   notes: string;
   swotAnalysis: SwotAnalysis;
   documents: Document[];
-  // Callbacks pour mettre à jour le parent
   onFormDataChange: (data: FormData) => void;
   onNotesChange: (notes: string) => void;
   onSwotChange: (swot: SwotAnalysis) => void;
@@ -92,36 +71,142 @@ export function InformationsStep({
   onStepComplete,
   onOpenDocument,
 }: InformationsStepProps) {
-  // État local uniquement pour les feedbacks UI temporaires
   const [notesCopied, setNotesCopied] = useState(false);
   const [swotSaved, setSwotSaved] = useState(false);
   const [showOwnerInfo, setShowOwnerInfo] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  // État pour la validation d'adresse
+  const [isAddressValidated, setIsAddressValidated] = useState(false);
+  const [isValidatingAddress, setIsValidatingAddress] = useState(true);
+  const [addressToValidate, setAddressToValidate] = useState(formData.address);
+
+  // Refs pour le scroll
+  const mapSectionRef = useRef<HTMLDivElement>(null);
+  const addressFieldRef = useRef<HTMLInputElement>(null);
+  const formTopRef = useRef<HTMLDivElement>(null);
+
+  // Scroll vers la carte au chargement initial si l'adresse existe
+  useEffect(() => {
+    if (formData.address && !isAddressValidated && mapSectionRef.current) {
+      // Petit délai pour laisser le composant se rendre
+      const timer = setTimeout(() => {
+        mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // Fonction appelée quand l'utilisateur confirme l'adresse
+  const handleConfirmAddress = () => {
+    setIsAddressValidated(true);
+    setIsValidatingAddress(false);
+    // Scroll vers le haut du formulaire
+    formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Fonction appelée quand l'utilisateur veut changer l'adresse
+  const handleChangeAddress = () => {
+    setIsAddressValidated(false);
+    setIsValidatingAddress(false);
+    // Vider l'adresse actuelle
+    onFormDataChange({ ...formData, address: '' });
+    setAddressToValidate('');
+    // Scroll vers le champ d'adresse et focus
+    setTimeout(() => {
+      addressFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      addressFieldRef.current?.focus();
+    }, 100);
+  };
+
+  // Fonction pour revalider une nouvelle adresse saisie
+  const handleRevalidateAddress = () => {
+    if (formData.address.trim()) {
+      setAddressToValidate(formData.address);
+      setIsValidatingAddress(true);
+      // Scroll vers la carte
+      setTimeout(() => {
+        mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  };
+
+  // Fonction appelée quand l'utilisateur déplace le marqueur sur la carte
+  const handleAddressUpdate = (newAddress: string) => {
+    // Mettre à jour l'adresse dans le formulaire
+    onFormDataChange({ ...formData, address: newAddress });
+    setAddressToValidate(newAddress);
+    // L'adresse n'est plus validée car elle a changé
+    setIsAddressValidated(false);
+  };
+
+  const handleAddFileClick = () => {
+    const fileInput = document.getElementById("file-upload") as HTMLInputElement;
+    fileInput?.click();
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert("Le fichier est trop volumineux. Taille maximale : 10MB");
+      return;
+    }
+
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/jpg",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Type de fichier non supporté. Formats acceptés : PDF, JPG, PNG");
+      return;
+    }
+
+    const newDocument: Document = {
+      id: `${Date.now()}`,
+      name: file.name,
+      size: formatFileSize(file.size),
+      date: new Date().toLocaleDateString("fr-FR"),
+      icon: file.type === "application/pdf" ? "📄" : "🖼️",
+      file: file,
+      url: URL.createObjectURL(file),
+    };
+
+    onDocumentsChange([...documents, newDocument]);
+
+    const fileInput = document.getElementById("file-upload") as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
+  };
+
   const handleDeleteDocument = (id: string) => {
     onDocumentsChange(documents.filter((doc) => doc.id !== id));
   };
 
-  // Fonction de validation
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.title.trim()) {
-      newErrors.title = "Le titre est obligatoire";
-    }
-
-    if (!formData.address.trim()) {
-      newErrors.address = "L'adresse est obligatoire";
-    }
-
-    if (!formData.ownerName.trim()) {
+    if (!formData.title.trim()) newErrors.title = "Le titre est obligatoire";
+    if (!formData.address.trim()) newErrors.address = "L'adresse est obligatoire";
+    if (!isAddressValidated) newErrors.address = "Veuillez valider l'adresse sur la carte";
+    if (!formData.ownerName.trim())
       newErrors.ownerName = "Le nom du propriétaire est obligatoire";
-    }
-
-    if (!formData.propertyType) {
+    if (!formData.propertyType)
       newErrors.propertyType = "Le type de bien est obligatoire";
-    }
 
     if (!formData.year) {
       newErrors.year = "L'année de construction est obligatoire";
@@ -143,13 +228,17 @@ export function InformationsStep({
 
   const handleSave = async () => {
     if (!validateForm()) {
-      alert("Veuillez remplir tous les champs obligatoires");
+      if (!isAddressValidated && formData.address) {
+        // Scroll vers la carte si l'adresse n'est pas validée
+        mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      alert("Veuillez remplir tous les champs obligatoires et valider l'adresse");
       return;
     }
 
     setIsSaving(true);
+
     try {
-      // Préparer les données pour l'API
       const propertyData = {
         owner_name: formData.ownerName,
         occupant_name: formData.occupantName,
@@ -163,11 +252,9 @@ export function InformationsStep({
         notes: notes || undefined,
       };
 
-      // Appel API
       await savePropertyInfo(projectId, propertyData);
 
-      console.log("Données enregistrées:", propertyData);
-      onStepComplete(); // Marque l'étape comme complétée (✓ dans la barre de progression)
+      onStepComplete();
       alert("Informations enregistrées avec succès !");
       setErrors({});
     } catch (error) {
@@ -186,7 +273,6 @@ export function InformationsStep({
 
   const handleSendToAI = () => {
     console.log("Notes envoyées à l'IA:", notes);
-    // TODO: Intégrer avec le composant AIAssistant
     alert("Notes envoyées à l'assistant IA !");
   };
 
@@ -203,13 +289,22 @@ export function InformationsStep({
         <div className="bg-white rounded-lg border border-gray-200 p-6 h-full">
           <h3 className="text-lg text-gray-900 mb-4">Documents</h3>
 
-          {/* Bouton Ajouter */}
-          <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-4">
+          <input
+            id="file-upload"
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
+          <button
+            onClick={handleAddFileClick}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-4"
+          >
             <Plus className="w-5 h-5" />
             Ajouter un fichier
           </button>
 
-          {/* Zone drag & drop */}
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mb-4 hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer">
             <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-sm text-gray-600">
@@ -220,7 +315,6 @@ export function InformationsStep({
             </p>
           </div>
 
-          {/* Liste des documents */}
           <div className="space-y-2">
             {documents.map((doc) => (
               <div
@@ -234,6 +328,7 @@ export function InformationsStep({
                     {doc.size} • {doc.date}
                   </p>
                 </div>
+
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => onOpenDocument?.(doc)}
@@ -242,6 +337,7 @@ export function InformationsStep({
                     <Eye className="w-3 h-3" />
                     Voir
                   </button>
+
                   <button
                     onClick={() => handleDeleteDocument(doc.id)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity"
@@ -257,20 +353,47 @@ export function InformationsStep({
 
       {/* Colonne droite - Formulaire (75%) */}
       <div className="flex-1">
-        <div className="bg-white rounded-lg border border-gray-200">
-          {/* Bandeau bleu */}
+        <div ref={formTopRef} className="bg-white rounded-lg border border-gray-200">
           <div className="bg-blue-600 px-6 py-4 rounded-t-lg">
             <div className="flex items-center gap-3">
               <Building className="w-6 h-6 text-white" />
-              <h3 className="text-lg text-white">
-                Informations de l'immeuble
-              </h3>
+              <h3 className="text-lg text-white">Informations de l'immeuble</h3>
             </div>
           </div>
 
-          {/* Formulaire */}
           <div className="p-6">
-            <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+            {/* Bandeau d'avertissement si adresse non validée */}
+            {!isAddressValidated && formData.address && (
+              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-amber-800 font-medium">Adresse non validée</p>
+                  <p className="text-amber-700 text-sm mt-1">
+                    Veuillez vérifier et confirmer l'adresse sur la carte ci-dessous avant de continuer.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Bandeau de succès si adresse validée */}
+            {isAddressValidated && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+                <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-green-800 font-medium">Adresse confirmée</p>
+                  <p className="text-green-700 text-sm mt-1">
+                    L'adresse "{formData.address}" a été validée.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSave();
+              }}
+            >
               <div className="grid grid-cols-2 gap-6 mb-6">
                 {/* Titre */}
                 <div>
@@ -299,22 +422,49 @@ export function InformationsStep({
                 <div>
                   <label className="block text-sm text-gray-700 mb-2">
                     Adresse <span className="text-red-500">*</span>
+                    {isAddressValidated && (
+                      <span className="ml-2 text-green-600 text-xs font-medium">✓ Validée</span>
+                    )}
                   </label>
-                  <input
-                    type="text"
-                    value={formData.address}
-                    required
-                    onChange={(e) => {
-                      onFormDataChange({ ...formData, address: e.target.value });
-                      if (errors.address) setErrors({ ...errors, address: "" });
-                    }}
-                    placeholder="Ex: 123 Rue des Immeubles, 75001 Paris"
-                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.address ? "border-red-500" : "border-gray-300"
-                    }`}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      ref={addressFieldRef}
+                      type="text"
+                      value={formData.address}
+                      required
+                      onChange={(e) => {
+                        onFormDataChange({
+                          ...formData,
+                          address: e.target.value,
+                        });
+                        if (errors.address) setErrors({ ...errors, address: "" });
+                        // Si l'adresse change après validation, invalider
+                        if (isAddressValidated && e.target.value !== addressToValidate) {
+                          setIsAddressValidated(false);
+                        }
+                      }}
+                      placeholder="Ex: 123 Rue des Immeubles, 75001 Paris"
+                      className={`flex-1 px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.address ? "border-red-500 bg-red-50" :
+                        !isAddressValidated && formData.address ? "border-amber-500 bg-amber-50" :
+                        isAddressValidated ? "border-green-500 bg-green-50" :
+                        "border-gray-300"
+                      }`}
+                    />
+                    {!isAddressValidated && formData.address && !isValidatingAddress && (
+                      <button
+                        type="button"
+                        onClick={handleRevalidateAddress}
+                        className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
+                      >
+                        Vérifier
+                      </button>
+                    )}
+                  </div>
                   {errors.address && (
-                    <p className="text-red-500 text-xs mt-1">{errors.address}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.address}
+                    </p>
                   )}
                 </div>
 
@@ -327,37 +477,41 @@ export function InformationsStep({
                       onClick={() => setShowOwnerInfo(!showOwnerInfo)}
                     />
                   </label>
+
                   <input
                     type="text"
                     value={formData.ownerName}
                     required
                     onChange={(e) => {
-                      onFormDataChange({ ...formData, ownerName: e.target.value });
-                      if (errors.ownerName) setErrors({ ...errors, ownerName: "" });
+                      onFormDataChange({
+                        ...formData,
+                        ownerName: e.target.value,
+                      });
+                      if (errors.ownerName)
+                        setErrors({ ...errors, ownerName: "" });
                     }}
                     placeholder="Ex: Jean Dupont"
                     className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       errors.ownerName ? "border-red-500" : "border-gray-300"
                     }`}
                   />
+
                   {errors.ownerName && (
-                    <p className="text-red-500 text-xs mt-1">{errors.ownerName}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.ownerName}
+                    </p>
                   )}
 
-                  {/* Popup propriétaire à droite */}
                   {showOwnerInfo && (
                     <div className="absolute top-0 left-full ml-2 w-72 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-                      {/* Flèche pointant vers l'input */}
                       <div className="absolute top-2 -left-2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-white"></div>
-
-                      {/* Contenu des informations */}
                       <div className="p-4 space-y-1 text-sm text-gray-700">
                         <p>
                           <strong>Nom complet:</strong> Jean Dupont
                         </p>
                         <p>
-                          <strong>Adresse :</strong> 123 Rue des Immeubles, 26
-                          000 Valence
+                          <strong>Adresse :</strong> 123 Rue des Immeubles, 26000
+                          Valence
                         </p>
                         <p>
                           <strong>Téléphone :</strong> +33 6 12 34 56 78
@@ -370,7 +524,7 @@ export function InformationsStep({
                   )}
                 </div>
 
-                {/* Nom de l'occupant */}
+                {/* Nom occupant */}
                 <div>
                   <label className="block text-sm text-gray-700 mb-2">
                     Nom de l'occupant
@@ -389,7 +543,7 @@ export function InformationsStep({
                   />
                 </div>
 
-                {/* Type de bien */}
+                {/* Type */}
                 <div>
                   <label className="block text-sm text-gray-700 mb-2">
                     Type de bien <span className="text-red-500">*</span>
@@ -398,8 +552,12 @@ export function InformationsStep({
                     value={formData.propertyType}
                     required
                     onChange={(e) => {
-                      onFormDataChange({ ...formData, propertyType: e.target.value });
-                      if (errors.propertyType) setErrors({ ...errors, propertyType: "" });
+                      onFormDataChange({
+                        ...formData,
+                        propertyType: e.target.value,
+                      });
+                      if (errors.propertyType)
+                        setErrors({ ...errors, propertyType: "" });
                     }}
                     className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       errors.propertyType ? "border-red-500" : "border-gray-300"
@@ -412,11 +570,13 @@ export function InformationsStep({
                     <option value="terrain">Terrain</option>
                   </select>
                   {errors.propertyType && (
-                    <p className="text-red-500 text-xs mt-1">{errors.propertyType}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.propertyType}
+                    </p>
                   )}
                 </div>
 
-                {/* Année de construction */}
+                {/* Année */}
                 <div>
                   <label className="block text-sm text-gray-700 mb-2">
                     Année de construction <span className="text-red-500">*</span>
@@ -441,7 +601,7 @@ export function InformationsStep({
                   )}
                 </div>
 
-                {/* Secteur géographique */}
+                {/* Secteur */}
                 <div>
                   <label className="block text-sm text-gray-700 mb-2">
                     Secteur géographique <span className="text-red-500">*</span>
@@ -471,33 +631,41 @@ export function InformationsStep({
                 </div>
               </div>
 
-              {/* Bouton Enregistrer */}
               <button
                 type="submit"
-                disabled={isSaving}
-                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSaving || !isAddressValidated}
+                className={`w-full px-6 py-3 text-white rounded-lg transition-colors text-base font-medium disabled:cursor-not-allowed ${
+                  isAddressValidated
+                    ? "bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                    : "bg-gray-400 cursor-not-allowed"
+                }`}
               >
-                {isSaving ? "Enregistrement..." : "Enregistrer les informations"}
+                {isSaving ? "Enregistrement..." :
+                 !isAddressValidated ? "Veuillez d'abord valider l'adresse" :
+                 "Enregistrer les informations"}
               </button>
             </form>
 
-            {/* Bloc-notes de l'évaluation */}
+            {/* Notes */}
             <div className="mt-6 bg-white rounded-lg border border-gray-200 p-4">
               <h3 className="text-lg text-gray-900 mb-3 flex items-center gap-2">
                 📝 Notes
               </h3>
+
               <textarea
                 value={notes}
                 onChange={(e) => onNotesChange(e.target.value)}
-                placeholder="Ajoutez vos observations, particularités du bien, points à vérifier..."
+                placeholder="Ajoutez vos observations..."
                 maxLength={500}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 rows={4}
               />
+
               <div className="flex items-center justify-between mt-3">
                 <span className="text-xs text-gray-500">
                   {notes.length}/500 caractères
                 </span>
+
                 <div className="flex gap-2">
                   <button
                     onClick={handleCopyNotes}
@@ -515,6 +683,7 @@ export function InformationsStep({
                       </>
                     )}
                   </button>
+
                   <button
                     onClick={handleSendToAI}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
@@ -526,126 +695,73 @@ export function InformationsStep({
               </div>
             </div>
 
-            {/* Carte interactive */}
-            <div className="mt-6 bg-white rounded-lg border border-gray-200 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Map className="w-6 h-6 text-blue-600" />
-                <h3 className="text-lg text-gray-900">
-                  Localisation du bien
-                </h3>
-              </div>
-
-              {/* Carte simulée */}
-              <div className="relative w-full h-[400px] bg-gray-100 rounded-lg overflow-hidden">
-                <img
-                  src="https://arc-anglerfish-eu-central-1-prod-leparisien.s3.amazonaws.com/public/5UAWECLJVFOXQS6RPEGA3XXU3M.jpg"
-                  alt="Carte"
-                  className="w-full h-full object-cover"
+            {/* Carte - Section de validation d'adresse */}
+            <div ref={mapSectionRef} className="mt-6">
+              {addressToValidate ? (
+                <AddressMap
+                  address={addressToValidate}
+                  onConfirm={handleConfirmAddress}
+                  onChangeAddress={handleChangeAddress}
+                  onAddressUpdate={handleAddressUpdate}
+                  isValidating={isValidatingAddress}
+                  isConfirmed={isAddressValidated}
                 />
-
-                {/* Overlay léger */}
-                <div className="absolute inset-0 bg-white/10"></div>
-
-                {/* Marqueur principal du bien évalué */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-                  <MapPin className="w-10 h-10 text-red-600 fill-red-600 drop-shadow-lg animate-bounce" />
-                  <div className="mt-2 bg-white px-3 py-2 rounded-lg shadow-lg border-2 border-red-600">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {formData.title || "Votre bien"}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      {formData.address || "Adresse non renseignée"}
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <Building className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Aucune adresse à afficher
+                    </h3>
+                    <p className="text-gray-500 max-w-md">
+                      Veuillez saisir une adresse dans le formulaire ci-dessus pour la visualiser sur la carte.
                     </p>
                   </div>
                 </div>
-
-                {/* Contrôles de la carte */}
-                <div className="absolute top-4 right-4 flex flex-col gap-2">
-                  <button className="p-2 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors border border-gray-200">
-                    <ZoomIn className="w-5 h-5 text-gray-700" />
-                  </button>
-                  <button className="p-2 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors border border-gray-200">
-                    <ZoomOut className="w-5 h-5 text-gray-700" />
-                  </button>
-                  <button className="p-2 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors border border-gray-200">
-                    <Maximize2 className="w-5 h-5 text-gray-700" />
-                  </button>
-                </div>
-
-                {/* Légende */}
-                <div className="absolute bottom-4 left-4 bg-white px-4 py-3 rounded-lg shadow-lg border border-gray-200">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-red-600 rounded-full"></div>
-                    <span className="text-xs text-gray-700 font-medium">
-                      Bien évalué
-                    </span>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
 
-            <br></br>
-            <br></br>
-
-            {/* Analyse SWOT */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+            {/* SWOT */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 mt-6">
               <h3 className="text-lg text-gray-900 mb-4 flex items-center gap-2">
                 📊 Analyse SWOT du bien
               </h3>
 
               <div className="grid grid-cols-2 gap-4">
-                {/* Forces (Strengths) */}
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xl">💪</span>
-                    <h4 className="text-base text-green-900 font-medium">
-                      FORCES
-                    </h4>
-                  </div>
+                  <h4 className="text-base text-green-900 font-medium mb-2">
+                    💪 FORCES
+                  </h4>
                   <textarea
                     value={swotAnalysis.strengths}
                     onChange={(e) =>
-                      onSwotChange({
-                        ...swotAnalysis,
-                        strengths: e.target.value,
-                      })
+                      onSwotChange({ ...swotAnalysis, strengths: e.target.value })
                     }
-                    placeholder="Ex: Emplacement premium, vitrine sur rue..."
-                    className="w-full px-3 py-2 bg-white border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm text-gray-900"
+                    className="w-full px-3 py-2 bg-white border border-green-300 rounded-lg resize-none"
                     rows={4}
                   />
                 </div>
 
-                {/* Faiblesses (Weaknesses) */}
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xl">⚠️</span>
-                    <h4 className="text-base text-red-900 font-medium">
-                      FAIBLESSES
-                    </h4>
-                  </div>
+                  <h4 className="text-base text-red-900 font-medium mb-2">
+                    ⚠️ FAIBLESSES
+                  </h4>
                   <textarea
                     value={swotAnalysis.weaknesses}
                     onChange={(e) =>
-                      onSwotChange({
-                        ...swotAnalysis,
-                        weaknesses: e.target.value,
-                      })
+                      onSwotChange({ ...swotAnalysis, weaknesses: e.target.value })
                     }
-                    placeholder="Ex: Travaux nécessaires, étage élevé..."
-                    className="w-full px-3 py-2 bg-white border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-sm text-gray-900"
+                    className="w-full px-3 py-2 bg-white border border-red-300 rounded-lg resize-none"
                     rows={4}
                   />
                 </div>
 
-                {/* Opportunités (Opportunities) */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xl">🎯</span>
-                    <h4 className="text-base text-blue-900 font-medium">
-                      OPPORTUNITÉS
-                    </h4>
-                  </div>
+                  <h4 className="text-base text-blue-900 font-medium mb-2">
+                    🎯 OPPORTUNITÉS
+                  </h4>
                   <textarea
                     value={swotAnalysis.opportunities}
                     onChange={(e) =>
@@ -654,36 +770,26 @@ export function InformationsStep({
                         opportunities: e.target.value,
                       })
                     }
-                    placeholder="Ex: Quartier en développement, métro proche..."
-                    className="w-full px-3 py-2 bg-white border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm text-gray-900"
+                    className="w-full px-3 py-2 bg-white border border-blue-300 rounded-lg resize-none"
                     rows={4}
                   />
                 </div>
 
-                {/* Menaces (Threats) */}
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xl">⚡</span>
-                    <h4 className="text-base text-orange-900 font-medium">
-                      MENACES
-                    </h4>
-                  </div>
+                  <h4 className="text-base text-orange-900 font-medium mb-2">
+                    ⚡ MENACES
+                  </h4>
                   <textarea
                     value={swotAnalysis.threats}
                     onChange={(e) =>
-                      onSwotChange({
-                        ...swotAnalysis,
-                        threats: e.target.value,
-                      })
+                      onSwotChange({ ...swotAnalysis, threats: e.target.value })
                     }
-                    placeholder="Ex: Concurrence forte, loyers élevés..."
-                    className="w-full px-3 py-2 bg-white border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none text-sm text-gray-900"
+                    className="w-full px-3 py-2 bg-white border border-orange-300 rounded-lg resize-none"
                     rows={4}
                   />
                 </div>
               </div>
 
-              {/* Bouton de sauvegarde */}
               <div className="flex justify-center mt-6">
                 <button
                   onClick={handleSaveSwot}
