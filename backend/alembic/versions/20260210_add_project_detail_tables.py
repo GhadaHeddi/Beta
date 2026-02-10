@@ -1,7 +1,7 @@
 """add_project_detail_tables
 
 Revision ID: add_detail_tables_001
-Revises: add_share_perm_001
+Revises: add_construction_year
 Create Date: 2026-02-10 10:00:00.000000
 
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_detail_tables_001'
-down_revision = 'add_share_perm_001'
+down_revision = 'add_construction_year'
 branch_labels = None
 depends_on = None
 
