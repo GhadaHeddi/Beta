@@ -47,6 +47,10 @@ class Project(Base):
     comparables = relationship("Comparable", back_populates="project", cascade="all, delete-orphan")
     valuations = relationship("Valuation", back_populates="project", cascade="all, delete-orphan")
     shares = relationship("ProjectShare", back_populates="project", cascade="all, delete-orphan")
+    surfaces = relationship("Surface", back_populates="project", cascade="all, delete-orphan")
+    analysis_result = relationship("AnalysisResult", back_populates="project", uselist=False, cascade="all, delete-orphan")
+    simulations = relationship("Simulation", back_populates="project", cascade="all, delete-orphan")
+    document_generations = relationship("DocumentGeneration", back_populates="project", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Project(id={self.id}, title='{self.title}', status='{self.status}')>"

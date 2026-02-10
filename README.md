@@ -189,14 +189,14 @@ test: Ajout de tests pour les comparables
 - [x] Frontend migré
 
 ### Sprint 1 (Semaines 3-4) - Authentification
-- [ ] Système de connexion/déconnexion
-- [ ] Gestion JWT
-- [ ] Page de profil utilisateur
+- [x] Système de connexion/déconnexion
+- [x] Gestion JWT
+- [x] Page de profil utilisateur
 
 ### Sprint 2 (Semaines 5-6) - Gestion des Projets
-- [ ] CRUD Projets
-- [ ] Liste des projets récents
-- [ ] Modal de création
+- [x] CRUD Projets
+- [x] Liste des projets récents
+- [x] Modal de création
 
 ### Sprint 3 (Semaines 7-8) - Étape Informations
 - [ ] Formulaire du bien
