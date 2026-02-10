@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.schemas.user import Token, UserResponse, UserUpdate
-from app.services.auth import verify_password, create_access_token
+from app.schemas.user import Token, UserResponse, UserUpdate, ChangePasswordRequest
+from app.services.auth import verify_password, create_access_token, hash_password
 from app.services.user import get_user_by_email, update_user
 from app.utils.security import get_current_user
 from app.models import User
@@ -75,3 +75,19 @@ async def update_current_user_profile(
         if existing:
             raise HTTPException(status_code=400, detail="Un utilisateur avec cet email existe déjà")
     return update_user(db, user=current_user, update_data=data)
+
+
+@router.post("/me/change-password")
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Change le mot de passe de l'utilisateur connecté.
+    """
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Mot de passe actuel incorrect")
+    current_user.password_hash = hash_password(payload.new_password)
+    db.commit()
+    return {"message": "Mot de passe modifié avec succès"}
