@@ -188,9 +188,21 @@ export function EvaluationProcess({
         );
 
       case "comparison":
-        return <ComparisonStep />;
-
-      case "analysis":
+        return (
+          <ComparisonStep
+            projectId={projectId}
+            evaluatedProperty={{
+              address: projectAddress,
+              surface: informationsFormData.year ? null : null, // TODO: add surface to form
+              construction_year: informationsFormData.year ? parseInt(informationsFormData.year) : null,
+              latitude: null, // Sera recupere depuis PropertyInfo via l'API
+              longitude: null,
+              property_type: propertyType,
+            }}
+            onStepComplete={() => setStepsCompletion(prev => ({ ...prev, comparison: true }))}
+          />
+        );
+      case "Analysis":
         return <AnalysisStep />;
 
       case "simulation":

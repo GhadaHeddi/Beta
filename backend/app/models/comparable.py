@@ -21,6 +21,8 @@ class Comparable(Base):
     price = Column(Float, nullable=False)  # Prix de vente
     price_per_m2 = Column(Float, nullable=False)  # Prix au m²
 
+    construction_year = Column(Integer, nullable=True)
+
     # Distance par rapport au bien évalué
     distance = Column(Float, nullable=True)  # Distance en km
     latitude = Column(Float, nullable=True)
