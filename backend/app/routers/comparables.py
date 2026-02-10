@@ -81,10 +81,12 @@ class SelectedComparableResponse(BaseModel):
     postal_code: Optional[str]
     city: Optional[str]
     surface: float
+    construction_year: Optional[int]
     price: float
     price_per_m2: float
     latitude: Optional[float]
     longitude: Optional[float]
+    distance: Optional[float]
     transaction_date: Optional[date]
     adjustment: float
     adjusted_price_per_m2: Optional[float]
@@ -187,18 +189,6 @@ async def select_comparable(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Projet non trouve"
-        )
-
-    # Verifier le nombre de comparables deja selectionnes
-    existing_count = db.query(Comparable).filter(
-        Comparable.project_id == project_id,
-        Comparable.validated == True
-    ).count()
-
-    if existing_count >= 3:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Maximum 3 comparables peuvent etre selectionnes par projet"
         )
 
     comparable = select_comparable_from_pool(

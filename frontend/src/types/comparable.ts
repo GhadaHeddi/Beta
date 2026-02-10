@@ -67,10 +67,12 @@ export interface SelectedComparable {
   postal_code: string | null;
   city: string | null;
   surface: number;
+  construction_year: number | null;
   price: number;
   price_per_m2: number;
   latitude: number | null;
   longitude: number | null;
+  distance: number | null;
   transaction_date: string | null;
   adjustment: number;
   adjusted_price_per_m2: number | null;

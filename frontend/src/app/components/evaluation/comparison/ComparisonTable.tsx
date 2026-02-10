@@ -44,11 +44,6 @@ export function ComparisonTable({
     return price.toLocaleString('fr-FR') + ' EUR';
   };
 
-  const formatDate = (dateStr: string | null): string => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('fr-FR');
-  };
-
   const dataColWidth = `${Math.floor((100 - 15) / (selectedComparables.length + 1))}%`;
 
   return (
@@ -143,13 +138,15 @@ export function ComparisonTable({
               ))}
             </TableRow>
 
-            {/* Date de transaction */}
+            {/* Annee de construction */}
             <TableRow>
-              <TableCell className={`${cellClass} font-medium text-gray-700`}>Date</TableCell>
-              <TableCell className={`${cellClass} bg-blue-50/50`}>-</TableCell>
+              <TableCell className={`${cellClass} font-medium text-gray-700`}>Annee construction</TableCell>
+              <TableCell className={`${cellClass} bg-blue-50/50`}>
+                {evaluatedProperty.construction_year || '-'}
+              </TableCell>
               {selectedComparables.map((comp) => (
                 <TableCell key={comp.id} className={cellClass}>
-                  {formatDate(comp.transaction_date)}
+                  {comp.construction_year || '-'}
                 </TableCell>
               ))}
             </TableRow>
@@ -177,7 +174,7 @@ export function ComparisonTable({
               <TableCell className={`${cellClass} bg-blue-50/50`}>-</TableCell>
               {selectedComparables.map((comp) => (
                 <TableCell key={comp.id} className={cellClass}>
-                  {comp.source_reference ? '-' : '-'}
+                  {comp.distance != null ? `${comp.distance} km` : '-'}
                 </TableCell>
               ))}
             </TableRow>

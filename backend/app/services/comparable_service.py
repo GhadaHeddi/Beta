@@ -311,6 +311,17 @@ def select_comparable_from_pool(
     # Calculer le prix ajuste
     adjusted_price = pool_item.price_per_m2 * (1 + adjustment / 100)
 
+    # Calculer la distance par rapport au bien evalue
+    distance_km = None
+    property_info = db.query(PropertyInfo).filter(
+        PropertyInfo.project_id == project_id
+    ).first()
+    if property_info and property_info.latitude and property_info.longitude:
+        distance_km = round(calculate_distance(
+            property_info.latitude, property_info.longitude,
+            pool_item.latitude, pool_item.longitude
+        ), 2)
+
     # Creer le comparable
     comparable = Comparable(
         project_id=project_id,
@@ -323,6 +334,8 @@ def select_comparable_from_pool(
         latitude=pool_item.latitude,
         longitude=pool_item.longitude,
         transaction_date=pool_item.transaction_date,
+        construction_year=pool_item.construction_year,
+        distance=distance_km,
         adjustment=adjustment,
         adjusted_price_per_m2=round(adjusted_price, 2),
         validated=True,
