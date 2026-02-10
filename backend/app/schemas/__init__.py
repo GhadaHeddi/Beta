@@ -4,6 +4,7 @@ Schémas Pydantic de l'application ORYEM
 from app.schemas.user import (
     UserBase,
     ConsultantCreate,
+    UserUpdate,
     UserResponse,
     UserBrief,
     Token,
@@ -25,6 +26,7 @@ __all__ = [
     # User schemas
     "UserBase",
     "ConsultantCreate",
+    "UserUpdate",
     "UserResponse",
     "UserBrief",
     "Token",
