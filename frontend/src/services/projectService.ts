@@ -45,13 +45,9 @@ export async function getRecentProjectsAuth(): Promise<Project[]> {
     throw new Error(`Erreur serveur (${response.status})`);
   }
 
-  // L'endpoint renvoie un objet pagine, on extrait les projets
+  // L'endpoint renvoie un objet paginé, on extrait les projets
   const data = await response.json();
-  // Gerer les deux formats possibles: { projects: [...] } ou directement [...]
-  if (Array.isArray(data)) {
-    return data;
-  }
-  return data.projects || [];
+  return data.projects ?? data.results ?? (Array.isArray(data) ? data : []);
 }
 
 /**
@@ -215,7 +211,7 @@ export interface PropertyInfoData {
  */
 export async function savePropertyInfo(projectId: number, data: PropertyInfoData): Promise<PropertyInfoData> {
   // Mode dev : endpoint sans authentification
-  const response = await fetch(`${API_BASE}/api/${projectId}/property-info`, {
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/property-info`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json'
@@ -475,70 +471,6 @@ export async function removeProjectShare(projectId: number, userId: number): Pro
   }
 }
 
-// === Fonctions pour les fichiers ===
-
-export interface UploadedFile {
-  id: number;
-  name: string;
-  mime_type: string;
-  size: number;
-  uploaded_at: string;
-}
-
-/**
- * Upload un fichier pour un projet
- */
-export async function uploadProjectFile(projectId: number, file: File): Promise<UploadedFile> {
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/files/upload`, {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Erreur upload (${response.status})`);
-  }
-
-  return response.json();
-}
-
-/**
- * Liste les fichiers d'un projet
- */
-export async function getProjectFiles(projectId: number): Promise<UploadedFile[]> {
-  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/files`);
-
-  if (!response.ok) {
-    throw new Error(`Erreur serveur (${response.status})`);
-  }
-
-  return response.json();
-}
-
-/**
- * Retourne l'URL pour afficher/telecharger un fichier
- */
-export function getFileUrl(projectId: number, fileId: number): string {
-  return `${API_BASE}/api/projects/dev/${projectId}/files/${fileId}`;
-}
-
-/**
- * Supprime un fichier d'un projet
- */
-export async function deleteProjectFile(projectId: number, fileId: number): Promise<void> {
-  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/files/${fileId}`, {
-    method: 'DELETE',
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Erreur suppression (${response.status})`);
-  }
-}
-
 // === Fonctions pour le filtrage et la recherche ===
 
 /**
@@ -669,4 +601,68 @@ export async function searchProjectsAuth(
   }
 
   return response.json();
+}
+
+// === Fonctions pour les fichiers ===
+
+export interface UploadedFile {
+  id: number;
+  name: string;
+  mime_type: string;
+  size: number;
+  uploaded_at: string;
+}
+
+/**
+ * Upload un fichier pour un projet
+ */
+export async function uploadProjectFile(projectId: number, file: File): Promise<UploadedFile> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/files/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur upload (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Liste les fichiers d'un projet
+ */
+export async function getProjectFiles(projectId: number): Promise<UploadedFile[]> {
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/files`);
+
+  if (!response.ok) {
+    throw new Error(`Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Retourne l'URL pour afficher/telecharger un fichier
+ */
+export function getFileUrl(projectId: number, fileId: number): string {
+  return `${API_BASE}/api/projects/dev/${projectId}/files/${fileId}`;
+}
+
+/**
+ * Supprime un fichier d'un projet
+ */
+export async function deleteProjectFile(projectId: number, fileId: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/files/${fileId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur suppression (${response.status})`);
+  }
 }

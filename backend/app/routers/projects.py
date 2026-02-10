@@ -9,6 +9,7 @@ from typing import List, Optional
 from pathlib import Path
 import os
 import shutil
+from datetime import datetime
 from app.database import get_db
 from app.schemas.project import (
     ProjectCreate,
@@ -22,9 +23,9 @@ from app.schemas.project import (
     FiltersMetadata,
     ProjectsPaginatedResponse,
 )
-from app.schemas.property_info import PropertyInfoUpdate, PropertyInfoResponse
 from app.schemas.user import UserBrief
 from app.models.project import PropertyType
+from app.schemas.property_info import PropertyInfoUpdate, PropertyInfoResponse
 from app.utils.security import get_current_user, get_user_admin_id
 from app.models import User, Project, ProjectShare, UserRole, PropertyInfo, Document, DocumentType
 from app.models.project_share import SharePermission
@@ -335,16 +336,20 @@ async def update_property_info_dev(
             detail="Projet non trouvé"
         )
 
-    if project.deleted_at is not None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ce projet est déjà dans la corbeille"
-        )
+    # Récupérer ou créer PropertyInfo
+    property_info = project.property_info
+    if not property_info:
+        property_info = PropertyInfo(project_id=project_id)
+        db.add(property_info)
 
-    project.deleted_at = datetime.utcnow()
+    # Appliquer les modifications
+    update_data = property_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(property_info, field, value)
+
     db.commit()
-    db.refresh(project)
-    return project
+    db.refresh(property_info)
+    return property_info
 
 
 @router.get("/dev/trash/all", response_model=List[ProjectWithDetails])

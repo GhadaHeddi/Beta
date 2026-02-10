@@ -87,7 +87,7 @@ cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 ```
 
-3. Modifier les variables d'environnement si nécessaire, notamment `SECRET_KEY` pour la production.
+3. Modifier les variables d'environnement si nécessaire, notamment `SECRET_KEY` et `PROXY`.
 
 ### Démarrage avec Docker
 
