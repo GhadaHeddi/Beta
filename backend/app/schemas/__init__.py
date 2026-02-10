@@ -10,6 +10,7 @@ from app.schemas.user import (
     Token,
     TokenData,
     LoginRequest,
+    ChangePasswordRequest,
 )
 from app.schemas.project import (
     ProjectBase,
@@ -32,6 +33,7 @@ __all__ = [
     "Token",
     "TokenData",
     "LoginRequest",
+    "ChangePasswordRequest",
     # Project schemas
     "ProjectBase",
     "ProjectCreate",

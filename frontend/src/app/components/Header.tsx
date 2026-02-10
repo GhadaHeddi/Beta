@@ -21,9 +21,10 @@ interface HeaderProps {
   onSearch?: (query: string) => void;
   onTrashClick?: () => void;
   onProfileClick?: () => void;
+  onSettingsClick?: () => void;
 }
 
-export function Header({ onLogoClick, onDashboardClick, searchQuery = "", onTrashClick, onProfileClick, onSearch }: HeaderProps) {
+export function Header({ onLogoClick, onDashboardClick, searchQuery = "", onTrashClick, onProfileClick, onSettingsClick, onSearch }: HeaderProps) {
   const { isAuthenticated, currentUser, accessToken, logout } = useAuth();
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -117,6 +118,13 @@ export function Header({ onLogoClick, onDashboardClick, searchQuery = "", onTras
     setIsProfileOpen(false);
     if (onProfileClick) {
       onProfileClick();
+    }
+  };
+
+  const handleSettingsClick = () => {
+    setIsProfileOpen(false);
+    if (onSettingsClick) {
+      onSettingsClick();
     }
   };
 
@@ -241,6 +249,7 @@ export function Header({ onLogoClick, onDashboardClick, searchQuery = "", onTras
                   onAddConsultant={handleOpenAddConsultant}
                   onTrashClick={handleTrashClick}
                   onProfileClick={handleProfileClick}
+                  onSettingsClick={handleSettingsClick}
                   userName={userData.name}
                   userEmail={userData.email}
                   userRole={userData.role}

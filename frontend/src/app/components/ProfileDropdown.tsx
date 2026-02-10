@@ -21,6 +21,7 @@ interface ProfileDropdownProps {
   onAddConsultant?: () => void;
   onTrashClick?: () => void;
   onProfileClick?: () => void;
+  onSettingsClick?: () => void;
   userName: string;
   userEmail: string;
   userRole: string;
@@ -35,6 +36,7 @@ export function ProfileDropdown({
   onAddConsultant,
   onTrashClick,
   onProfileClick,
+  onSettingsClick,
   userName,
   userEmail,
   userRole,
@@ -135,7 +137,7 @@ export function ProfileDropdown({
       {/* Menu Items */}
       <div className="py-2">
         <MenuItem icon={User} label="Mon profil" onClick={onProfileClick} />
-        <MenuItem icon={Settings} label="Paramètres du compte" showChevron />
+        <MenuItem icon={Settings} label="Paramètres du compte" onClick={onSettingsClick} showChevron />
         <MenuItem icon={Briefcase} label="Mes projets" />
         <MenuItem icon={Trash2} label="Corbeille" onClick={onTrashClick} />
         <MenuItem icon={BarChart3} label="Statistiques" />
