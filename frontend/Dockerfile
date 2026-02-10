@@ -8,13 +8,6 @@ ENV HTTPS_PROXY=${PROXY}
 ENV http_proxy=${PROXY}
 ENV https_proxy=${PROXY}
 
-ARG PROXY
-
-ENV HTTP_PROXY=${PROXY}
-ENV HTTPS_PROXY=${PROXY}
-ENV http_proxy=${PROXY}
-ENV https_proxy=${PROXY}
-
 # Répertoire de travail
 WORKDIR /app
 
@@ -29,6 +22,7 @@ RUN npm install --legacy-peer-deps
 # Nettoyer les variables proxy après l'installation
 ENV http_proxy=
 ENV https_proxy=
+
 # Copie du code source
 COPY . .
 
