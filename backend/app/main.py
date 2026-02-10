@@ -11,6 +11,7 @@ from app.database import engine, Base
 from app.routers.auth import router as auth_router
 from app.routers.admin import router as admin_router
 from app.routers.projects import router as projects_router
+from app.routers.comparables import router as comparables_router
 
 app = FastAPI(
     title="ORYEM API",
@@ -68,6 +69,7 @@ async def health_check():
 app.include_router(auth_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
+app.include_router(comparables_router, prefix="/api")
 
 
 if __name__ == "__main__":

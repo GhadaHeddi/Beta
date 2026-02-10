@@ -448,3 +448,223 @@ export async function removeProjectShare(projectId: number, userId: number): Pro
     throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
   }
 }
+
+
+// === Fonctions Comparables ===
+
+import type {
+  ComparableSearchResponse,
+  ComparisonFilters,
+  SelectedComparable
+} from '@/types/comparable';
+
+/**
+ * Recherche des biens comparables avec filtres
+ * Utilise l'endpoint DEV sans authentification pour le developpement
+ */
+export async function searchComparables(
+  projectId: number,
+  filters: ComparisonFilters
+): Promise<ComparableSearchResponse> {
+  const params = new URLSearchParams();
+
+  if (filters.surfaceMin !== null) {
+    params.append('surface_min', filters.surfaceMin.toString());
+  }
+  if (filters.surfaceMax !== null) {
+    params.append('surface_max', filters.surfaceMax.toString());
+  }
+  if (filters.yearMin !== null) {
+    params.append('year_min', filters.yearMin.toString());
+  }
+  if (filters.yearMax !== null) {
+    params.append('year_max', filters.yearMax.toString());
+  }
+  params.append('distance_km', filters.distanceKm.toString());
+  params.append('source', filters.source);
+
+  // Mode DEV: endpoint sans authentification
+  const response = await fetch(
+    `${API_BASE}/api/projects/${projectId}/comparables/dev/search?${params}`,
+    {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+
+  if (response.status === 404) {
+    throw new Error('Projet non trouve');
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Recupere les comparables selectionnes pour un projet
+ */
+export async function getSelectedComparables(projectId: number): Promise<SelectedComparable[]> {
+  // Mode DEV: endpoint sans authentification
+  const response = await fetch(
+    `${API_BASE}/api/projects/${projectId}/comparables/dev/selected`,
+    {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Selectionne un comparable du pool pour ce projet
+ */
+export async function selectComparable(
+  projectId: number,
+  comparablePoolId: number,
+  adjustment: number = 0,
+  notes?: string
+): Promise<SelectedComparable> {
+  // Mode DEV: endpoint sans authentification
+  const response = await fetch(
+    `${API_BASE}/api/projects/${projectId}/comparables/dev/select`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        comparable_pool_id: comparablePoolId,
+        adjustment,
+        notes
+      })
+    }
+  );
+
+  if (response.status === 400) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Maximum 3 comparables atteint');
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Retire un comparable de la selection
+ */
+export async function deselectComparable(
+  projectId: number,
+  comparableId: number
+): Promise<void> {
+  // Mode DEV: endpoint sans authentification
+  const response = await fetch(
+    `${API_BASE}/api/projects/${projectId}/comparables/dev/select/${comparableId}`,
+    {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+
+  if (response.status === 404) {
+    throw new Error('Comparable non trouve');
+  }
+
+  if (!response.ok && response.status !== 204) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+}
+
+/**
+ * Met a jour l'ajustement d'un comparable
+ */
+export async function updateComparableAdjustment(
+  projectId: number,
+  comparableId: number,
+  adjustment: number
+): Promise<SelectedComparable> {
+  const token = localStorage.getItem('access_token');
+
+  if (!token) {
+    throw new Error('Non authentifie');
+  }
+
+  const response = await fetch(
+    `${API_BASE}/api/projects/${projectId}/comparables/select/${comparableId}/adjustment`,
+    {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ adjustment })
+    }
+  );
+
+  if (response.status === 401) {
+    throw new Error('Session expiree');
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Valide les comparables selectionnes et passe a l'etape suivante
+ */
+export async function validateComparables(projectId: number): Promise<{ message: string; current_step: number }> {
+  const token = localStorage.getItem('access_token');
+
+  if (!token) {
+    throw new Error('Non authentifie');
+  }
+
+  const response = await fetch(
+    `${API_BASE}/api/projects/${projectId}/comparables/validate`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+
+  if (response.status === 401) {
+    throw new Error('Session expiree');
+  }
+
+  if (response.status === 400) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Selectionnez au moins un comparable');
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}

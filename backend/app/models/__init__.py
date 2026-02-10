@@ -9,6 +9,7 @@ from app.models.document import Document, DocumentType
 from app.models.comparable import Comparable
 from app.models.valuation import Valuation, ValuationMethod
 from app.models.dvf_record import DVFRecord
+from app.models.comparable_pool import ComparablePool, ComparableSource, TransactionType
 
 __all__ = [
     "User",
@@ -24,4 +25,7 @@ __all__ = [
     "Valuation",
     "ValuationMethod",
     "DVFRecord",
+    "ComparablePool",
+    "ComparableSource",
+    "TransactionType",
 ]
