@@ -11,10 +11,23 @@ import {
   Save,
   Check,
   AlertTriangle,
+  UserPlus,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { savePropertyInfo, uploadProjectFile, deleteProjectFile, getFileUrl } from "@/services/projectService";
 import { AddressMap } from "@/app/components/AddressMap";
+
+// Base de données simulée des propriétaires connus
+// TODO: Remplacer par un appel API réel vers le backend
+interface OwnerRecord {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  projectsCount: number;
+}
+
+const INITIAL_OWNERS: OwnerRecord[] = [];
 
 interface Document {
   id: string;
@@ -82,6 +95,51 @@ export function InformationsStep({
   const [showOwnerInfo, setShowOwnerInfo] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+
+  // Base proprietaires (mutable pour ajouter de nouveaux)
+  const [ownersDb, setOwnersDb] = useState<OwnerRecord[]>(INITIAL_OWNERS);
+
+  // Formulaire nouveau proprietaire
+  const [newOwnerForm, setNewOwnerForm] = useState({
+    address: "",
+    phone: "",
+    email: "",
+  });
+  const [ownerSaved, setOwnerSaved] = useState(false);
+
+  const findOwner = (name: string): OwnerRecord | null => {
+    if (!name.trim()) return null;
+    const lower = name.trim().toLowerCase();
+    return ownersDb.find((o: OwnerRecord) => o.name.toLowerCase() === lower) ?? null;
+  };
+
+  const handleSaveNewOwner = () => {
+    if (!formData.ownerName.trim()) return;
+    if (!newOwnerForm.email.trim() && !newOwnerForm.phone.trim()) {
+      alert("Veuillez renseigner au moins un email ou un telephone.");
+      return;
+    }
+    const newOwner: OwnerRecord = {
+      name: formData.ownerName.trim(),
+      address: newOwnerForm.address,
+      phone: newOwnerForm.phone,
+      email: newOwnerForm.email,
+      projectsCount: 1,
+    };
+    setOwnersDb((prev: OwnerRecord[]) => [...prev, newOwner]);
+    setOwnerSaved(true);
+    setTimeout(() => setOwnerSaved(false), 2000);
+    // TODO: appel API pour sauvegarder le proprietaire en base
+  };
+
+  // Reset le formulaire nouveau proprietaire quand le nom change
+  useEffect(() => {
+    const existing = findOwner(formData.ownerName);
+    if (existing) {
+      setNewOwnerForm({ address: "", phone: "", email: "" });
+      setOwnerSaved(false);
+    }
+  }, [formData.ownerName]);
 
   // État pour la validation d'adresse
   const [isValidatingAddress, setIsValidatingAddress] = useState(!isAddressValidated && !!formData.address);
@@ -539,26 +597,99 @@ export function InformationsStep({
                     </p>
                   )}
 
-                  {showOwnerInfo && (
-                    <div className="absolute top-0 left-full ml-2 w-72 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-                      <div className="absolute top-2 -left-2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-white"></div>
-                      <div className="p-4 space-y-1 text-sm text-gray-700">
-                        <p>
-                          <strong>Nom complet:</strong> Jean Dupont
-                        </p>
-                        <p>
-                          <strong>Adresse :</strong> 123 Rue des Immeubles, 26000
-                          Valence
-                        </p>
-                        <p>
-                          <strong>Téléphone :</strong> +33 6 12 34 56 78
-                        </p>
-                        <p>
-                          <strong>Email :</strong> jean.dupont@email.com
-                        </p>
+                  {showOwnerInfo && (() => {
+                    const owner = findOwner(formData.ownerName);
+                    return (
+                      <div className="absolute top-0 left-full ml-2 w-80 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                        <div className="absolute top-2 -left-2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-white"></div>
+                        {owner ? (
+                          <div className="p-4 space-y-2 text-sm text-gray-700">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-blue-700 font-semibold text-xs">
+                                  {owner.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900">{owner.name}</p>
+                                <p className="text-xs text-gray-500">{owner.projectsCount} projet(s) en base</p>
+                              </div>
+                            </div>
+                            <p><strong>Adresse :</strong> {owner.address}</p>
+                            <p><strong>Telephone :</strong> {owner.phone}</p>
+                            <p><strong>Email :</strong> {owner.email}</p>
+                          </div>
+                        ) : (
+                          <div className="p-4 text-sm text-gray-600">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+                              <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                                <UserPlus className="w-4 h-4 text-amber-700" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900">Nouveau proprietaire</p>
+                                <p className="text-xs text-gray-500">Remplissez sa fiche</p>
+                              </div>
+                            </div>
+                            {formData.ownerName.trim() ? (
+                              <div className="space-y-2 mt-2">
+                                <div>
+                                  <label className="block text-xs text-gray-500 mb-1">Adresse</label>
+                                  <input
+                                    type="text"
+                                    value={newOwnerForm.address}
+                                    onChange={(e) => setNewOwnerForm({ ...newOwnerForm, address: e.target.value })}
+                                    placeholder="Ex: 10 Rue de la Paix, 75002 Paris"
+                                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-500 mb-1">Telephone</label>
+                                  <input
+                                    type="tel"
+                                    value={newOwnerForm.phone}
+                                    onChange={(e) => setNewOwnerForm({ ...newOwnerForm, phone: e.target.value })}
+                                    placeholder="Ex: +33 6 00 00 00 00"
+                                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-500 mb-1">Email</label>
+                                  <input
+                                    type="email"
+                                    value={newOwnerForm.email}
+                                    onChange={(e) => setNewOwnerForm({ ...newOwnerForm, email: e.target.value })}
+                                    placeholder="Ex: contact@exemple.fr"
+                                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={handleSaveNewOwner}
+                                  className="w-full mt-2 px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                                >
+                                  {ownerSaved ? (
+                                    <>
+                                      <Check className="w-4 h-4" />
+                                      Enregistre !
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Save className="w-4 h-4" />
+                                      Enregistrer le proprietaire
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            ) : (
+                              <p className="text-gray-500">
+                                Saisissez un nom de proprietaire pour voir ses informations.
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
 
                 {/* Nom occupant */}
