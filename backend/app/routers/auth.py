@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.schemas.user import Token, UserResponse
+from app.schemas.user import Token, UserResponse, UserUpdate
 from app.services.auth import verify_password, create_access_token
-from app.services.user import get_user_by_email
+from app.services.user import get_user_by_email, update_user
 from app.utils.security import get_current_user
 from app.models import User
 
@@ -56,3 +56,22 @@ async def get_current_user_profile(
     Retourne le profil de l'utilisateur connecté.
     """
     return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_current_user_profile(
+    update_data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Met à jour le profil de l'utilisateur connecté.
+    """
+    data = update_data.model_dump(exclude_unset=True)
+    if not data:
+        raise HTTPException(status_code=400, detail="Aucune donnée à mettre à jour")
+    if "email" in data and data["email"] != current_user.email:
+        existing = get_user_by_email(db, email=data["email"])
+        if existing:
+            raise HTTPException(status_code=400, detail="Un utilisateur avec cet email existe déjà")
+    return update_user(db, user=current_user, update_data=data)

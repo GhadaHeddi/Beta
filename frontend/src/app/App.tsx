@@ -9,6 +9,7 @@ import { Dashboard } from "@/app/components/Dashboard";
 import { MarketTrends } from "@/app/components/MarketTrends";
 import { SearchResultsPage } from "@/app/components/SearchResultsPage";
 import { TrashPage } from "@/app/components/TrashPage";
+import { ProfilePage } from "@/app/components/ProfilePage";
 import { LoginModal } from "@/app/components/LoginModal";
 import { Loader2 } from "lucide-react";
 import type { Project } from "@/types/project";
@@ -32,7 +33,7 @@ function PageTransition({ children, className = "" }: { children: React.ReactNod
 
 export default function App() {
   const { isAuthenticated, isAuthLoading, login } = useAuth();
-  const [view, setView] = useState<"home" | "evaluation" | "dashboard" | "market-trends" | "search-results"| "trash">("home");
+  const [view, setView] = useState<"home" | "evaluation" | "dashboard" | "market-trends" | "search-results" | "trash" | "profile">("home");
   const [currentProject, setCurrentProject] = useState<CurrentProject | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -92,6 +93,10 @@ export default function App() {
     setView("trash");
   };
 
+  const handleOpenProfile = () => {
+    setView("profile");
+  };
+
   // Loading state while verifying auth token
   if (isAuthLoading) {
     return (
@@ -112,9 +117,16 @@ export default function App() {
   // Authenticated — render views with transitions
   return (
     <div key={view} className="page-transition">
+      {view === "profile" && (
+        <>
+          <Header onLogoClick={handleBackToHome} onDashboardClick={handleOpenDashboard} onTrashClick={handleOpenTrash} onProfileClick={handleOpenProfile} />
+          <ProfilePage onBack={handleBackToHome} />
+        </>
+      )}
+
       {view === "trash" && (
         <>
-          <Header onLogoClick={handleBackToHome} onDashboardClick={handleOpenDashboard} onTrashClick={handleOpenTrash} />
+          <Header onLogoClick={handleBackToHome} onDashboardClick={handleOpenDashboard} onTrashClick={handleOpenTrash} onProfileClick={handleOpenProfile} />
           <TrashPage onBack={handleBackToHome} isAdmin={false} />
         </>
       )}
@@ -133,7 +145,7 @@ export default function App() {
 
       {view === "dashboard" && (
         <>
-          <Header onLogoClick={handleBackToHome} onDashboardClick={handleCloseDashboard} onTrashClick={handleOpenTrash} />
+          <Header onLogoClick={handleBackToHome} onDashboardClick={handleCloseDashboard} onTrashClick={handleOpenTrash} onProfileClick={handleOpenProfile} />
           <Dashboard onBack={handleCloseDashboard} />
         </>
       )}
@@ -147,6 +159,7 @@ export default function App() {
           <Header
             onLogoClick={handleBackToHome}
             onDashboardClick={handleOpenDashboard}
+            onProfileClick={handleOpenProfile}
             searchQuery={searchQuery}
             onSearch={handleSearch}
           />
@@ -164,6 +177,7 @@ export default function App() {
             onLogoClick={handleBackToHome}
             onDashboardClick={handleOpenDashboard}
             onTrashClick={handleOpenTrash}
+            onProfileClick={handleOpenProfile}
             searchQuery={searchQuery}
             onSearch={handleSearch}
           />
