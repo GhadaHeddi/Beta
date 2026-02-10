@@ -1,4 +1,12 @@
-FROM node:20-alpine
+FROM quay.io/fedora/nodejs-20:latest
+
+USER root
+
+ARG PROXY
+ENV HTTP_PROXY=${PROXY}
+ENV HTTPS_PROXY=${PROXY}
+ENV http_proxy=${PROXY}
+ENV https_proxy=${PROXY}
 
 ARG PROXY
 
@@ -16,7 +24,11 @@ COPY package.json ./
 # Installation des dépendances
 RUN npm config set proxy ${HTTP_PROXY}
 RUN npm config set https-proxy ${HTTP_PROXY}
-RUN npm install
+RUN npm install --legacy-peer-deps
+
+# Nettoyer les variables proxy après l'installation
+ENV http_proxy=
+ENV https_proxy=
 # Copie du code source
 COPY . .
 

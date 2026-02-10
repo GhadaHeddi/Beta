@@ -268,17 +268,12 @@ export function InformationsStep({
         construction_year: formData.year ? parseInt(formData.year) : undefined,
         materials: formData.materials || undefined,
         geographic_sector: formData.geographicSector,
-        swot_strengths: swotAnalysis.strengths || undefined,
-        swot_weaknesses: swotAnalysis.weaknesses || undefined,
-        swot_opportunities: swotAnalysis.opportunities || undefined,
-        swot_threats: swotAnalysis.threats || undefined,
-        notes: notes || undefined,
       };
 
       await savePropertyInfo(projectId, propertyData);
 
       onStepComplete();
-      alert("Informations enregistrées avec succès !");
+      alert("Informations de l'immeuble enregistrées avec succès !");
       setErrors({});
     } catch (error) {
       console.error("Erreur lors de la sauvegarde:", error);
@@ -299,10 +294,26 @@ export function InformationsStep({
     alert("Notes envoyées à l'assistant IA !");
   };
 
-  const handleSaveSwot = () => {
-    console.log("Analyse SWOT sauvegardée:", swotAnalysis);
-    setSwotSaved(true);
-    setTimeout(() => setSwotSaved(false), 2000);
+  const handleSaveSwot = async () => {
+    setSwotSaved(false);
+
+    try {
+      const swotData = {
+        swot_strengths: swotAnalysis.strengths || undefined,
+        swot_weaknesses: swotAnalysis.weaknesses || undefined,
+        swot_opportunities: swotAnalysis.opportunities || undefined,
+        swot_threats: swotAnalysis.threats || undefined,
+        notes: notes || undefined,
+      };
+
+      await savePropertyInfo(projectId, swotData);
+
+      setSwotSaved(true);
+      setTimeout(() => setSwotSaved(false), 2000);
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde SWOT:", error);
+      alert(error instanceof Error ? error.message : "Erreur lors de la sauvegarde");
+    }
   };
 
   return (
