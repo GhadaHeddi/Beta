@@ -601,10 +601,12 @@ export function InformationsStep({
                     }`}
                   >
                     <option value="">Sélectionner</option>
-                    <option value="bureaux">Bureau</option>
-                    <option value="local_activite">Local d'activité</option>
-                    <option value="local_commercial">Local commercial</option>
-                    <option value="terrain">Terrain</option>
+                    <option value="office">Bureaux</option>
+                    <option value="industrial">Locaux d'activité</option>
+                    <option value="retail">Local commercial</option>
+                    <option value="warehouse">Entrepôt</option>
+                    <option value="land">Terrain</option>
+                    <option value="mixed">Mixte</option>
                   </select>
                   {errors.propertyType && (
                     <p className="text-red-500 text-xs mt-1">
