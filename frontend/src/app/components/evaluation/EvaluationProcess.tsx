@@ -102,6 +102,8 @@ export function EvaluationProcess({
     []
   );
 
+  const [isAddressValidated, setIsAddressValidated] = useState(false);
+
   const [stepsCompletion, setStepsCompletion] = useState<Record<string, boolean>>(
     {
       informations: false,
@@ -172,6 +174,8 @@ export function EvaluationProcess({
             notes={informationsNotes}
             swotAnalysis={informationsSwot}
             documents={informationsDocuments}
+            isAddressValidated={isAddressValidated}
+            onAddressValidatedChange={setIsAddressValidated}
             onFormDataChange={setInformationsFormData}
             onNotesChange={setInformationsNotes}
             onSwotChange={setInformationsSwot}
@@ -203,6 +207,8 @@ export function EvaluationProcess({
             notes={informationsNotes}
             swotAnalysis={informationsSwot}
             documents={informationsDocuments}
+            isAddressValidated={isAddressValidated}
+            onAddressValidatedChange={setIsAddressValidated}
             onFormDataChange={setInformationsFormData}
             onNotesChange={setInformationsNotes}
             onSwotChange={setInformationsSwot}

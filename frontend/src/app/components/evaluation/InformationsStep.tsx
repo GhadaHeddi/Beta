@@ -52,6 +52,8 @@ interface InformationsStepProps {
   notes: string;
   swotAnalysis: SwotAnalysis;
   documents: Document[];
+  isAddressValidated: boolean;
+  onAddressValidatedChange: (validated: boolean) => void;
   onFormDataChange: (data: FormData) => void;
   onNotesChange: (notes: string) => void;
   onSwotChange: (swot: SwotAnalysis) => void;
@@ -66,6 +68,8 @@ export function InformationsStep({
   notes,
   swotAnalysis,
   documents,
+  isAddressValidated,
+  onAddressValidatedChange,
   onFormDataChange,
   onNotesChange,
   onSwotChange,
@@ -80,8 +84,7 @@ export function InformationsStep({
   const [isSaving, setIsSaving] = useState(false);
 
   // État pour la validation d'adresse
-  const [isAddressValidated, setIsAddressValidated] = useState(false);
-  const [isValidatingAddress, setIsValidatingAddress] = useState(true);
+  const [isValidatingAddress, setIsValidatingAddress] = useState(!isAddressValidated && !!formData.address);
   const [addressToValidate, setAddressToValidate] = useState(formData.address);
 
   // Refs pour le scroll
@@ -102,7 +105,7 @@ export function InformationsStep({
 
   // Fonction appelée quand l'utilisateur confirme l'adresse
   const handleConfirmAddress = () => {
-    setIsAddressValidated(true);
+    onAddressValidatedChange(true);
     setIsValidatingAddress(false);
     // Scroll vers le haut du formulaire
     formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -110,7 +113,7 @@ export function InformationsStep({
 
   // Fonction appelée quand l'utilisateur veut changer l'adresse
   const handleChangeAddress = () => {
-    setIsAddressValidated(false);
+    onAddressValidatedChange(false);
     setIsValidatingAddress(false);
     // Vider l'adresse actuelle
     onFormDataChange({ ...formData, address: '' });
@@ -140,7 +143,7 @@ export function InformationsStep({
     onFormDataChange({ ...formData, address: newAddress });
     setAddressToValidate(newAddress);
     // L'adresse n'est plus validée car elle a changé
-    setIsAddressValidated(false);
+    onAddressValidatedChange(false);
   };
 
   const handleAddFileClick = () => {
@@ -460,7 +463,7 @@ export function InformationsStep({
                         if (errors.address) setErrors({ ...errors, address: "" });
                         // Si l'adresse change après validation, invalider
                         if (isAddressValidated && e.target.value !== addressToValidate) {
-                          setIsAddressValidated(false);
+                          onAddressValidatedChange(false);
                         }
                       }}
                       placeholder="Ex: 123 Rue des Immeubles, 75001 Paris"
