@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
   ComparisonFilters,
   PriceIndicators,
   ComparableMap,
   ComparisonTable,
-  ComparisonValidation,
+  SelectedComparablesList,
 } from './comparison';
 import {
   searchComparables,
@@ -20,7 +20,6 @@ import type {
   SelectedComparable,
   ComparablePool,
   EvaluatedProperty,
-  DEFAULT_COMPARISON_FILTERS,
 } from '@/types/comparable';
 
 interface Props {
@@ -39,30 +38,28 @@ const DEFAULT_FILTERS: FiltersType = {
 };
 
 export function ComparisonStep({ projectId, evaluatedProperty, onStepComplete }: Props) {
-  // State
   const [filters, setFilters] = useState<FiltersType>(DEFAULT_FILTERS);
   const [searchResults, setSearchResults] = useState<ComparableSearchResponse | null>(null);
-  const [selectedComparables, setSelectedComparables] = useState<SelectedComparable[]>([]);
+  // Biens affiches dans le tableau de comparaison
+  const [comparedItems, setComparedItems] = useState<SelectedComparable[]>([]);
+  // Biens gardes pour la suite (selection finale, donnees completes)
+  const [finalItems, setFinalItems] = useState<SelectedComparable[]>([]);
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(false);
 
-  // Fetch comparables with debounce
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchComparables();
     }, 300);
-
     return () => clearTimeout(timeoutId);
   }, [filters, projectId]);
 
-  // Load selected comparables on mount
   useEffect(() => {
     loadSelectedComparables();
   }, [projectId]);
 
   const fetchComparables = async () => {
     if (!projectId) return;
-
     setLoading(true);
     try {
       const results = await searchComparables(projectId, filters);
@@ -77,67 +74,95 @@ export function ComparisonStep({ projectId, evaluatedProperty, onStepComplete }:
 
   const loadSelectedComparables = async () => {
     if (!projectId) return;
-
     try {
       const selected = await getSelectedComparables(projectId);
-      setSelectedComparables(selected);
+      setComparedItems(selected);
+      setFinalItems(selected);
     } catch (error) {
       console.error('Erreur chargement comparables selectionnes:', error);
     }
   };
 
+  // Clic sur marker carte = ajouter/retirer du tableau de comparaison
   const handleMarkerClick = async (comparable: ComparablePool) => {
-    // Verifier si deja selectionne - si oui, deselectionner
-    const existing = selectedComparables.find(
+    const existing = comparedItems.find(
       (c) => c.source_reference === String(comparable.id)
     );
 
     if (existing) {
-      await handleRemoveComparable(existing.id);
-      return;
-    }
-
-    // Verifier limite max 3
-    if (selectedComparables.length >= 3) {
-      toast.warning('Maximum 3 comparables. Deselectionnez-en un d\'abord.');
+      handleRemoveFromTable(existing.id);
       return;
     }
 
     try {
       const selected = await selectComparable(projectId, comparable.id);
-      setSelectedComparables([...selectedComparables, selected]);
-      toast.success('Comparable ajoute');
+      setComparedItems((prev) => [...prev, selected]);
+      toast.success('Comparable ajoute a la comparaison');
     } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de la selection');
+      toast.error(error.message || "Erreur lors de l'ajout");
     }
   };
 
-  const handleRemoveComparable = async (id: number) => {
+  // Retirer du tableau de comparaison SEULEMENT (garde dans la selection finale)
+  const handleRemoveFromTable = (id: number) => {
+    setComparedItems((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  // Selectionner un bien pour la suite (copie dans finalItems)
+  const handleToggleSelect = (id: number) => {
+    const alreadySelected = finalItems.some((f) => f.id === id);
+    if (alreadySelected) {
+      setFinalItems((prev) => prev.filter((f) => f.id !== id));
+    } else {
+      const item = comparedItems.find((c) => c.id === id);
+      if (item) {
+        setFinalItems((prev) => [...prev, item]);
+      }
+    }
+  };
+
+  // Selectionner tous les biens du tableau
+  const handleSelectAll = () => {
+    const comparedIds = comparedItems.map((c) => c.id);
+    const allSelected = comparedIds.every((id) => finalItems.some((f) => f.id === id));
+    if (allSelected) {
+      // Deselectionner tous ceux qui sont dans le tableau
+      setFinalItems((prev) => prev.filter((f) => !comparedIds.includes(f.id)));
+    } else {
+      // Ajouter ceux qui ne sont pas encore selectionnes
+      setFinalItems((prev) => {
+        const existingIds = prev.map((f) => f.id);
+        const newItems = comparedItems.filter((c) => !existingIds.includes(c.id));
+        return [...prev, ...newItems];
+      });
+    }
+  };
+
+  // Retirer definitivement de la selection finale
+  const handleRemoveFromFinal = async (id: number) => {
     try {
       await deselectComparable(projectId, id);
-      setSelectedComparables(selectedComparables.filter((c) => c.id !== id));
-      toast.success('Comparable retire');
+      setFinalItems((prev) => prev.filter((f) => f.id !== id));
+      // Aussi retirer du tableau si present
+      setComparedItems((prev) => prev.filter((c) => c.id !== id));
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors de la suppression');
     }
   };
 
-  const handleAdjustmentChange = (id: number, adjustment: number) => {
-    setSelectedComparables(
-      selectedComparables.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              adjustment,
-              adjusted_price_per_m2: Math.round(c.price_per_m2 * (1 + adjustment / 100)),
-            }
-          : c
-      )
-    );
+  // Remettre les biens selectionnes dans le tableau de comparaison
+  const handleRecompare = () => {
+    setComparedItems((prev) => {
+      const existingIds = prev.map((c) => c.id);
+      const toAdd = finalItems.filter((f) => !existingIds.includes(f.id));
+      return [...prev, ...toAdd];
+    });
+    toast.success('Biens selectionnes remis en comparaison');
   };
 
+  // Valider et passer a l'etape suivante
   const handleValidate = async () => {
-    if (selectedComparables.length === 0) {
+    if (finalItems.length === 0) {
       toast.error('Selectionnez au moins un comparable');
       return;
     }
@@ -158,17 +183,17 @@ export function ComparisonStep({ projectId, evaluatedProperty, onStepComplete }:
     setFilters(DEFAULT_FILTERS);
   };
 
-  // IDs des comparables selectionnes (pour la carte)
-  const selectedIds = selectedComparables.map((c) =>
+  // IDs des comparables dans le tableau (pour surligner sur la carte)
+  const comparedIds = comparedItems.map((c) =>
     c.source_reference ? parseInt(c.source_reference) : 0
   );
 
+  const finalSelectionIds = finalItems.map((f) => f.id);
+
   return (
     <div className="space-y-6">
-      {/* Indicateurs de prix */}
       <PriceIndicators stats={searchResults?.stats || null} loading={loading} />
 
-      {/* Filtres a gauche + Carte a droite */}
       <div className="flex gap-4">
         <div className="w-[280px] shrink-0">
           <ComparisonFilters
@@ -182,24 +207,26 @@ export function ComparisonStep({ projectId, evaluatedProperty, onStepComplete }:
           <ComparableMap
             center={searchResults?.center || null}
             comparables={searchResults?.comparables || []}
-            selectedIds={selectedIds}
+            selectedIds={comparedIds}
             distanceKm={filters.distanceKm}
             onMarkerClick={handleMarkerClick}
           />
         </div>
       </div>
 
-      {/* Tableau de comparaison */}
       <ComparisonTable
         evaluatedProperty={evaluatedProperty}
-        selectedComparables={selectedComparables}
-        onAdjustmentChange={handleAdjustmentChange}
-        onRemove={handleRemoveComparable}
+        selectedComparables={comparedItems}
+        onRemove={handleRemoveFromTable}
+        onSelect={handleToggleSelect}
+        onSelectAll={handleSelectAll}
+        finalSelection={finalSelectionIds}
       />
 
-      {/* Bouton de validation */}
-      <ComparisonValidation
-        selectedCount={selectedComparables.length}
+      <SelectedComparablesList
+        items={finalItems}
+        onRemove={handleRemoveFromFinal}
+        onRecompare={handleRecompare}
         onValidate={handleValidate}
         loading={validating}
       />

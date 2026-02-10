@@ -131,7 +131,7 @@ export function ComparableMap({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-6">
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-6 relative z-0">
       <MapContainer
         center={[mapCenter.lat, mapCenter.lng]}
         zoom={13}

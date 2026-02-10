@@ -291,15 +291,6 @@ def select_comparable_from_pool(
     Returns:
         Le Comparable cree ou None si erreur
     """
-    # Verifier le nombre de comparables deja selectionnes (max 3)
-    existing_count = db.query(Comparable).filter(
-        Comparable.project_id == project_id,
-        Comparable.validated == True
-    ).count()
-
-    if existing_count >= 3:
-        return None
-
     # Recuperer le comparable du pool
     pool_item = db.query(ComparablePool).filter(
         ComparablePool.id == pool_id
