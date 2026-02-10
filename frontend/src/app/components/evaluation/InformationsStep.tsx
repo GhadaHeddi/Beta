@@ -13,17 +13,19 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { savePropertyInfo } from "@/services/projectService";
+import { savePropertyInfo, uploadProjectFile, deleteProjectFile, getFileUrl } from "@/services/projectService";
 import { AddressMap } from "@/app/components/AddressMap";
 
 interface Document {
   id: string;
+  serverId?: number;
   name: string;
   size: string;
   date: string;
   icon: string;
   file?: File;
   url?: string;
+  mimeType?: string;
 }
 
 interface FormData {
@@ -50,6 +52,8 @@ interface InformationsStepProps {
   notes: string;
   swotAnalysis: SwotAnalysis;
   documents: Document[];
+  isAddressValidated: boolean;
+  onAddressValidatedChange: (validated: boolean) => void;
   onFormDataChange: (data: FormData) => void;
   onNotesChange: (notes: string) => void;
   onSwotChange: (swot: SwotAnalysis) => void;
@@ -64,6 +68,8 @@ export function InformationsStep({
   notes,
   swotAnalysis,
   documents,
+  isAddressValidated,
+  onAddressValidatedChange,
   onFormDataChange,
   onNotesChange,
   onSwotChange,
@@ -78,8 +84,7 @@ export function InformationsStep({
   const [isSaving, setIsSaving] = useState(false);
 
   // État pour la validation d'adresse
-  const [isAddressValidated, setIsAddressValidated] = useState(false);
-  const [isValidatingAddress, setIsValidatingAddress] = useState(true);
+  const [isValidatingAddress, setIsValidatingAddress] = useState(!isAddressValidated && !!formData.address);
   const [addressToValidate, setAddressToValidate] = useState(formData.address);
 
   // Refs pour le scroll
@@ -100,7 +105,7 @@ export function InformationsStep({
 
   // Fonction appelée quand l'utilisateur confirme l'adresse
   const handleConfirmAddress = () => {
-    setIsAddressValidated(true);
+    onAddressValidatedChange(true);
     setIsValidatingAddress(false);
     // Scroll vers le haut du formulaire
     formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -108,7 +113,7 @@ export function InformationsStep({
 
   // Fonction appelée quand l'utilisateur veut changer l'adresse
   const handleChangeAddress = () => {
-    setIsAddressValidated(false);
+    onAddressValidatedChange(false);
     setIsValidatingAddress(false);
     // Vider l'adresse actuelle
     onFormDataChange({ ...formData, address: '' });
@@ -138,7 +143,7 @@ export function InformationsStep({
     onFormDataChange({ ...formData, address: newAddress });
     setAddressToValidate(newAddress);
     // L'adresse n'est plus validée car elle a changé
-    setIsAddressValidated(false);
+    onAddressValidatedChange(false);
   };
 
   const handleAddFileClick = () => {
@@ -154,7 +159,7 @@ export function InformationsStep({
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
@@ -177,24 +182,42 @@ export function InformationsStep({
       return;
     }
 
-    const newDocument: Document = {
-      id: `${Date.now()}`,
-      name: file.name,
-      size: formatFileSize(file.size),
-      date: new Date().toLocaleDateString("fr-FR"),
-      icon: file.type === "application/pdf" ? "📄" : "🖼️",
-      file: file,
-      url: URL.createObjectURL(file),
-    };
+    try {
+      // Upload vers le backend
+      const uploaded = await uploadProjectFile(projectId, file);
 
-    onDocumentsChange([...documents, newDocument]);
+      const newDocument: Document = {
+        id: `${Date.now()}`,
+        serverId: uploaded.id,
+        name: uploaded.name,
+        size: formatFileSize(uploaded.size),
+        date: new Date().toLocaleDateString("fr-FR"),
+        icon: file.type === "application/pdf" ? "📄" : "🖼️",
+        file: file,
+        url: getFileUrl(projectId, uploaded.id),
+        mimeType: uploaded.mime_type,
+      };
+
+      onDocumentsChange([...documents, newDocument]);
+    } catch (error) {
+      console.error("Erreur upload:", error);
+      alert("Erreur lors de l'upload du fichier");
+    }
 
     const fileInput = document.getElementById("file-upload") as HTMLInputElement;
     if (fileInput) fileInput.value = "";
   };
 
-  const handleDeleteDocument = (id: string) => {
-    onDocumentsChange(documents.filter((doc) => doc.id !== id));
+  const handleDeleteDocument = async (id: string) => {
+    const doc = documents.find((d) => d.id === id);
+    if (doc?.serverId) {
+      try {
+        await deleteProjectFile(projectId, doc.serverId);
+      } catch (error) {
+        console.error("Erreur suppression:", error);
+      }
+    }
+    onDocumentsChange(documents.filter((d) => d.id !== id));
   };
 
   const validateForm = (): boolean => {
@@ -440,7 +463,7 @@ export function InformationsStep({
                         if (errors.address) setErrors({ ...errors, address: "" });
                         // Si l'adresse change après validation, invalider
                         if (isAddressValidated && e.target.value !== addressToValidate) {
-                          setIsAddressValidated(false);
+                          onAddressValidatedChange(false);
                         }
                       }}
                       placeholder="Ex: 123 Rue des Immeubles, 75001 Paris"

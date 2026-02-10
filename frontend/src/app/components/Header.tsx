@@ -5,8 +5,8 @@ import {
   ChevronDown,
   LayoutDashboard,
 } from "lucide-react";
-import { useState, useEffect } from "react";
-import { LoginModal } from "@/app/components/LoginModal";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { InboxDropdown } from "@/app/components/InboxDropdown";
 import { ProfileDropdown } from "@/app/components/ProfileDropdown";
 import { LogoutConfirmModal } from "@/app/components/LogoutConfirmModal";
@@ -14,82 +14,22 @@ import { AddConsultantModal } from "@/app/components/AddConsultantModal";
 
 const API_BASE_URL = "http://localhost:8000/api";
 
-interface UserData {
-  id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  role: string;
-  avatar_url?: string;
-}
-
 interface HeaderProps {
   onLogoClick?: () => void;
   onDashboardClick?: () => void;
-  onTrashClick?: () => void;
   searchQuery?: string;
   onSearch?: (query: string) => void;
+  onTrashClick?: () => void;
+
 }
 
-export function Header({ onLogoClick, onDashboardClick, onTrashClick, searchQuery = "", onSearch }: HeaderProps) {
-  // Verification synchrone du token pour eviter le flash de la page de connexion
-  const hasToken = !!localStorage.getItem("access_token");
-
-export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderProps) {
-  // Vérification synchrone du token pour éviter le flash de la page de connexion
-  const hasToken = !!localStorage.getItem("access_token");
-
-  const [isCheckingAuth, setIsCheckingAuth] = useState(hasToken); // En cours de vérification si token présent
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(!hasToken); // N'afficher que si pas de token
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+export function Header({ onLogoClick, onDashboardClick, searchQuery = "", onTrashClick, onSearch }: HeaderProps) {
+  const { isAuthenticated, currentUser, accessToken, logout } = useAuth();
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isAddConsultantModalOpen, setIsAddConsultantModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(3);
-  const [accessToken, setAccessToken] = useState<string | null>(hasToken ? localStorage.getItem("access_token") : null);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [loginError, setLoginError] = useState<string | null>(null);
-
-  // Check for existing token on mount
-  useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      setAccessToken(token);
-      fetchCurrentUser(token);
-    } else {
-      setIsCheckingAuth(false);
-    }
-  }, []);
-
-  const fetchCurrentUser = async (token: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        const user = await response.json();
-        setCurrentUser(user);
-        setIsAuthenticated(true);
-        setIsLoginModalOpen(false);
-      } else {
-        // Token invalid, clear it
-        localStorage.removeItem("access_token");
-        setAccessToken(null);
-        setIsAuthenticated(false);
-        setIsLoginModalOpen(true);
-      }
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      localStorage.removeItem("access_token");
-      setIsAuthenticated(false);
-      setIsLoginModalOpen(true);
-    } finally {
-      setIsCheckingAuth(false);
-    }
-  };
 
   // Compute userData from currentUser
   const userData = currentUser
@@ -107,34 +47,6 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
         initials: "",
         avatar: undefined,
       };
-
-  const handleLogin = async (email: string, password: string) => {
-    setLoginError(null);
-    try {
-      const formData = new FormData();
-      formData.append("username", email);
-      formData.append("password", password);
-
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const token = data.access_token;
-        localStorage.setItem("access_token", token);
-        // Recharger la page pour reinitialiser tous les etats avec le nouvel utilisateur
-        window.location.reload();
-      } else {
-        const errorData = await response.json();
-        setLoginError(errorData.detail || "Email ou mot de passe incorrect");
-      }
-    } catch (error) {
-      console.error("Login error:", error);
-      setLoginError("Erreur de connexion au serveur");
-    }
-  };
 
   const handleAddConsultant = async (name: string, email: string, password: string) => {
     if (!accessToken) return;
@@ -183,13 +95,9 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
   };
 
   const handleLogoutConfirm = () => {
-    localStorage.removeItem("access_token");
-    setAccessToken(null);
-    setCurrentUser(null);
     setIsLogoutModalOpen(false);
-    setIsAuthenticated(false);
-    setIsLoginModalOpen(true);
     setUnreadCount(0);
+    logout();
   };
 
   const handleDashboardClick = () => {
@@ -242,12 +150,7 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
 
           {!isAuthenticated ? (
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsLoginModalOpen(true)}
-                className="px-6 py-2.5 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors"
-              >
-                Se connecter
-              </button>
+              <span className="text-sm text-gray-500">Non connecté</span>
             </div>
           ) : (
             <div className="flex items-center gap-3">
@@ -341,12 +244,6 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
           )}
         </div>
       </header>
-
-      <LoginModal
-        isOpen={isLoginModalOpen && !isCheckingAuth}
-        onLogin={handleLogin}
-        error={loginError}
-      />
 
       <AddConsultantModal
         isOpen={isAddConsultantModalOpen}
