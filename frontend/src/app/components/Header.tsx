@@ -27,17 +27,27 @@ interface HeaderProps {
   onLogoClick?: () => void;
   onDashboardClick?: () => void;
   onTrashClick?: () => void;
+  searchQuery?: string;
+  onSearch?: (query: string) => void;
 }
 
+export function Header({ onLogoClick, onDashboardClick, onTrashClick, searchQuery = "", onSearch }: HeaderProps) {
+  // Verification synchrone du token pour eviter le flash de la page de connexion
+  const hasToken = !!localStorage.getItem("access_token");
+
 export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderProps) {
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(true);
+  // Vérification synchrone du token pour éviter le flash de la page de connexion
+  const hasToken = !!localStorage.getItem("access_token");
+
+  const [isCheckingAuth, setIsCheckingAuth] = useState(hasToken); // En cours de vérification si token présent
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(!hasToken); // N'afficher que si pas de token
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isAddConsultantModalOpen, setIsAddConsultantModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(3);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(hasToken ? localStorage.getItem("access_token") : null);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
 
@@ -47,6 +57,8 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
     if (token) {
       setAccessToken(token);
       fetchCurrentUser(token);
+    } else {
+      setIsCheckingAuth(false);
     }
   }, []);
 
@@ -74,6 +86,8 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
       localStorage.removeItem("access_token");
       setIsAuthenticated(false);
       setIsLoginModalOpen(true);
+    } finally {
+      setIsCheckingAuth(false);
     }
   };
 
@@ -110,7 +124,7 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
         const data = await response.json();
         const token = data.access_token;
         localStorage.setItem("access_token", token);
-        // Recharger la page pour réinitialiser tous les états avec le nouvel utilisateur
+        // Recharger la page pour reinitialiser tous les etats avec le nouvel utilisateur
         window.location.reload();
       } else {
         const errorData = await response.json();
@@ -147,10 +161,10 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
 
       if (response.ok) {
         setIsAddConsultantModalOpen(false);
-        alert("Consultant créé avec succès !");
+        alert("Consultant cree avec succes !");
       } else {
         const errorData = await response.json();
-        alert(errorData.detail || "Erreur lors de la création du consultant");
+        alert(errorData.detail || "Erreur lors de la creation du consultant");
       }
     } catch (error) {
       console.error("Error creating consultant:", error);
@@ -206,14 +220,24 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
           </button>
 
           <div className="flex-1 max-w-2xl">
-            <div className="relative">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (searchQuery.trim()) {
+                  onSearch?.(searchQuery);
+                }
+              }}
+              className="relative"
+            >
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => onSearch?.(e.currentTarget.value)}
                 placeholder="Rechercher un projet, une adresse..."
                 className="w-full pl-12 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-            </div>
+            </form>
           </div>
 
           {!isAuthenticated ? (
@@ -319,7 +343,7 @@ export function Header({ onLogoClick, onDashboardClick, onTrashClick }: HeaderPr
       </header>
 
       <LoginModal
-        isOpen={isLoginModalOpen}
+        isOpen={isLoginModalOpen && !isCheckingAuth}
         onLogin={handleLogin}
         error={loginError}
       />

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Edit2,
   Share2,
@@ -12,13 +13,12 @@ import {
   RefreshCw,
   X,
 } from "lucide-react";
-import { useState } from "react";
 import { useRecentProjects } from "@/hooks/useProjects";
 import { deleteProjectAuth } from "@/services/projectService";
 import { ShareModal } from "@/app/components/ShareModal";
 import type { Project, ProjectStatus, PropertyType } from "@/types/project";
 
-// Mapping des types de propriété backend vers l'affichage
+// Mapping des types de propriete backend vers l'affichage
 const propertyTypeConfig: Record<PropertyType, { icon: typeof Building2; label: string; emoji: string }> = {
   office: { icon: Building2, label: "Bureaux", emoji: "\u{1F3E2}" },
   warehouse: { icon: Factory, label: "Entrepot", emoji: "\u{1F3ED}" },
@@ -53,7 +53,6 @@ interface RecentProjectsProps {
 }
 
 export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
-  const { projects, loading, error, refetch } = useRecentProjects();
   const [progressFilter, setProgressFilter] = useState<"all" | "0-50" | "50-75" | "75-99" | "completed">("all");
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [projectToShare, setProjectToShare] = useState<Project | null>(null);
@@ -93,7 +92,9 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
     setDeleteError(null);
   };
 
-  // Filtrer les projets en fonction du filtre de progression
+  const { projects, loading, error, refetch } = useRecentProjects();
+
+  // Filtrage local par progression
   const filteredProjects = projects.filter((project) => {
     const progress = calculateProgress(project.current_step);
     if (progressFilter === "all") return true;
@@ -112,9 +113,9 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
   const completionStatus = averageCompletion === 100 ? "completed" : averageCompletion === 0 ? "draft" : "in_progress";
 
   // Affichage du chargement (skeleton)
-  if (loading) {
+  if (loading && projects.length === 0) {
     return (
-      <div className="bg-white px-8 py-8">
+      <div className="bg-white px-8 py-8 flex-1">
         <div className="w-full">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl text-blue-900">
@@ -135,7 +136,7 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
   // Affichage de l'erreur
   if (error) {
     return (
-      <div className="bg-white px-8 py-8">
+      <div className="bg-white px-8 py-8 flex-1">
         <div className="w-full">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl text-blue-900">
@@ -161,129 +162,136 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
   }
 
   return (
-    <div className="bg-white px-8 py-8">
-      <div className="w-full">
-        <div className="flex items-center justify-between mb-6">
+    <div className="bg-white flex flex-1 px-8 py-8">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <h2 className="text-2xl text-blue-900">
             Mes avis de valeur recents
           </h2>
 
-          <div className="flex items-center gap-4">
-            {/* Filtres de progression */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-600" />
-              <button
-                onClick={() => setProgressFilter("all")}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  progressFilter === "all"
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                Tous
-              </button>
-              <button
-                onClick={() => setProgressFilter("0-50")}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  progressFilter === "0-50"
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                0-50%
-              </button>
-              <button
-                onClick={() => setProgressFilter("50-75")}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  progressFilter === "50-75"
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                50-75%
-              </button>
-              <button
-                onClick={() => setProgressFilter("75-99")}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  progressFilter === "75-99"
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                75-99%
-              </button>
-              <button
-                onClick={() => setProgressFilter("completed")}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  progressFilter === "completed"
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                Termines
-              </button>
-            </div>
-
-            {/* Badge de completion totale */}
-            <span
-              className={`inline-block px-3 py-1.5 rounded-full text-sm whitespace-nowrap ${
-                statusConfig[completionStatus].color
-              }`}
-            >
-              Completion totale : {averageCompletion}%
-            </span>
-          </div>
+          {/* Compteur de resultats */}
+          <span className="text-sm text-gray-500 whitespace-nowrap">
+            {filteredProjects.length} projet{filteredProjects.length !== 1 ? 's' : ''}
+          </span>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 h-[50vh] overflow-y-auto">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead className="sticky top-0 z-10 bg-gray-50">
-                <tr className="border-b border-gray-200">
-                  <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    Responsable du projet
-                  </th>
-                  <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    Statut
-                  </th>
-                  <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    Titre
-                  </th>
-                  <th className="text-center px-10 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    Adresse
-                  </th>
-                  <th className="text-center px-8 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    Occupant actuel
-                  </th>
-                  <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    Surface (m2)
-                  </th>
-                  <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    Loyer de marche <br />
-                    (EUR/m2/an)
-                  </th>
-                  <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    Prix vente estime <br />
-                    (EUR/m2)
-                  </th>
-                  <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    Annee <br />
-                    de construction
-                  </th>
-                  <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProjects.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
-                      Aucun projet trouve
-                    </td>
+        {/* Filtres de progression */}
+        <div className="flex items-center gap-4 mb-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-gray-600" />
+            <button
+              onClick={() => setProgressFilter("all")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                progressFilter === "all"
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Tous
+            </button>
+            <button
+              onClick={() => setProgressFilter("0-50")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                progressFilter === "0-50"
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              0-50%
+            </button>
+            <button
+              onClick={() => setProgressFilter("50-75")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                progressFilter === "50-75"
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              50-75%
+            </button>
+            <button
+              onClick={() => setProgressFilter("75-99")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                progressFilter === "75-99"
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              75-99%
+            </button>
+            <button
+              onClick={() => setProgressFilter("completed")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                progressFilter === "completed"
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Termines
+            </button>
+          </div>
+
+          {/* Badge de completion totale */}
+          <span
+            className={`inline-block px-3 py-1.5 rounded-full text-sm whitespace-nowrap ${
+              statusConfig[completionStatus].color
+            }`}
+          >
+            Completion totale : {averageCompletion}%
+          </span>
+        </div>
+
+        {/* Table */}
+        <div className="flex-1 bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col">
+          {filteredProjects.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center py-12 text-gray-500">
+              <p className="text-lg">Aucun projet</p>
+              <p className="text-sm mt-1">Vous n'avez pas encore cree de projet.</p>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-auto">
+              <table className="w-full border-collapse">
+                <thead className="sticky top-0 z-10 bg-gray-50">
+                  <tr className="border-b border-gray-200">
+                    <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      Responsable du projet
+                    </th>
+                    <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      Statut
+                    </th>
+                    <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      Titre
+                    </th>
+                    <th className="text-center px-10 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      Adresse
+                    </th>
+                    <th className="text-center px-8 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      Occupant actuel
+                    </th>
+                    <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      Surface (m2)
+                    </th>
+                    <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      Loyer de marche <br />
+                      (EUR/m2/an)
+                    </th>
+                    <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      Prix vente estime <br />
+                      (EUR/m2)
+                    </th>
+                    <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      Annee <br />
+                      de construction
+                    </th>
+                    <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      Actions
+                    </th>
                   </tr>
-                ) : (
-                  filteredProjects.map((project, index) => {
+                </thead>
+                <tbody>
+                  {filteredProjects.map((project, index) => {
                     const typeConfig = propertyTypeConfig[project.property_type];
                     const progress = calculateProgress(project.current_step);
                     const progressColor = getProgressColor(progress);
@@ -370,11 +378,11 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
                         </td>
                       </tr>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
