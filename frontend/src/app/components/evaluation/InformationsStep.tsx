@@ -213,11 +213,14 @@ export function InformationsStep({
     if (doc?.serverId) {
       try {
         await deleteProjectFile(projectId, doc.serverId);
+        onDocumentsChange(documents.filter((d) => d.id !== id));
       } catch (error) {
         console.error("Erreur suppression:", error);
+        alert("Erreur lors de la suppression du fichier");
       }
+    } else {
+      onDocumentsChange(documents.filter((d) => d.id !== id));
     }
-    onDocumentsChange(documents.filter((d) => d.id !== id));
   };
 
   const validateForm = (): boolean => {
