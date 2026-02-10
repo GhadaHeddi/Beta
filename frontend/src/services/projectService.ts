@@ -46,8 +46,8 @@ export async function getRecentProjectsAuth(): Promise<Project[]> {
   }
 
   // L'endpoint renvoie un objet paginé, on extrait les projets
-  const data: ProjectsResponse = await response.json();
-  return data.projects;
+  const data = await response.json();
+  return data.projects ?? data.results ?? (Array.isArray(data) ? data : []);
 }
 
 /**

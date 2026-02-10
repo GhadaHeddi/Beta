@@ -95,7 +95,7 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
   const { projects, loading, error, refetch } = useRecentProjects();
 
   // Filtrage local par progression
-  const filteredProjects = projects.filter((project) => {
+  const filteredProjects = (projects ?? []).filter((project) => {
     const progress = calculateProgress(project.current_step);
     if (progressFilter === "all") return true;
     if (progressFilter === "0-50") return progress >= 0 && progress <= 50;
@@ -106,14 +106,15 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
   });
 
   // Calculer le taux de completion moyen
-  const averageCompletion = projects.length > 0
-    ? Math.round(projects.reduce((acc, p) => acc + calculateProgress(p.current_step), 0) / projects.length)
+  const safeProjects = projects ?? [];
+  const averageCompletion = safeProjects.length > 0
+    ? Math.round(safeProjects.reduce((acc, p) => acc + calculateProgress(p.current_step), 0) / safeProjects.length)
     : 0;
 
   const completionStatus = averageCompletion === 100 ? "completed" : averageCompletion === 0 ? "draft" : "in_progress";
 
   // Affichage du chargement (skeleton)
-  if (loading && projects.length === 0) {
+  if (loading && (!projects || projects.length === 0)) {
     return (
       <div className="bg-white px-8 py-8 flex-1">
         <div className="w-full">
