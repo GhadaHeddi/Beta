@@ -91,7 +91,6 @@ class ProjectShareResponse(BaseModel):
     id: int
     project_id: int
     user_id: int
-    can_write: bool
     permission: str
     created_at: Optional[datetime] = None
     user: Optional[UserBrief] = None

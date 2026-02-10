@@ -310,7 +310,6 @@ export interface ProjectShare {
   id: number;
   project_id: number;
   user_id: number;
-  can_write: boolean;
   permission: SharePermission;
   created_at: string;
   user: UserBrief;

@@ -1091,11 +1091,9 @@ async def share_project(
         )
 
     # Créer le partage
-    can_write = permission in ["write", "admin"]
     share = ProjectShare(
         project_id=project_id,
         user_id=target_user.id,
-        can_write=can_write,
         permission=permission
     )
     db.add(share)
@@ -1159,7 +1157,6 @@ async def update_project_share(
 
     # Mettre à jour
     share.permission = permission
-    share.can_write = permission in ["write", "admin"]
     db.commit()
     db.refresh(share)
 

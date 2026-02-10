@@ -1,4 +1,21 @@
 services:
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: oryem_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@oryem.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "127.0.0.1:5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      db:
+        condition: service_healthy
+
+
   # Base de données PostgreSQL
   db:
     image: postgis/postgis:16-3.4
@@ -67,6 +84,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  pgadmin_data:
     driver: local
 
 networks:
