@@ -1,10 +1,10 @@
 """
 Routes des projets - CRUD avec gestion des permissions de partage
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
-from typing import List
+from sqlalchemy import or_, func, desc, asc
+from typing import List, Optional
 from datetime import datetime
 from app.database import get_db
 from app.schemas.project import (
@@ -16,7 +16,11 @@ from app.schemas.project import (
     ProjectShareCreate,
     ProjectShareUpdate,
     ProjectShareResponse,
+    FiltersMetadata,
+    ProjectsPaginatedResponse,
 )
+from app.schemas.user import UserBrief
+from app.models.project import PropertyType
 from app.schemas.property_info import PropertyInfoUpdate, PropertyInfoResponse
 from app.utils.security import get_current_user, get_user_admin_id
 from app.models import User, Project, ProjectShare, UserRole, PropertyInfo
@@ -27,24 +31,227 @@ router = APIRouter(prefix="/projects", tags=["Projets"])
 
 # === Endpoint temporaire de test (sans authentification) ===
 
-@router.get("/dev/all", response_model=List[ProjectWithDetails])
-async def list_all_projects_dev(db: Session = Depends(get_db)):
+def _get_filters_metadata(
+    db: Session,
+    search: Optional[str] = None,
+    city: Optional[str] = None,
+    consultant_id: Optional[int] = None,
+    construction_year_min: Optional[int] = None,
+    construction_year_max: Optional[int] = None,
+) -> FiltersMetadata:
     """
-    [DEV ONLY] Liste tous les projets sans authentification.
-    Exclut les projets dans la corbeille (deleted_at IS NOT NULL).
+    Helper pour construire les métadonnées des filtres.
+    Les compteurs de types de bien sont calculés sur les résultats filtrés
+    (recherche + autres filtres, mais PAS le filtre de type lui-même).
+    """
+    # Récupérer les villes disponibles (toutes les villes de la base)
+    cities_query = (
+        db.query(PropertyInfo.city)
+        .filter(PropertyInfo.city.isnot(None), PropertyInfo.city != "")
+        .distinct()
+        .all()
+    )
+    available_cities = sorted([c[0] for c in cities_query if c[0]])
+
+    # Récupérer les consultants (tous les utilisateurs pour le mode dev)
+    consultants = db.query(User).all()
+    available_consultants = [
+        UserBrief(
+            id=u.id,
+            email=u.email,
+            first_name=u.first_name,
+            last_name=u.last_name,
+            role=u.role.value
+        )
+        for u in consultants
+    ]
+
+    # Récupérer la plage d'années de construction (toute la base)
+    year_range = (
+        db.query(
+            func.min(PropertyInfo.construction_year),
+            func.max(PropertyInfo.construction_year)
+        )
+        .filter(PropertyInfo.construction_year.isnot(None))
+        .first()
+    )
+    construction_year_range = (
+        (year_range[0], year_range[1]) if year_range and year_range[0] else (None, None)
+    )
+
+    # Construire la query de base pour les compteurs de types
+    # On applique les filtres SAUF le filtre de type pour avoir des compteurs pertinents
+    counts_query = (
+        db.query(Project.property_type, func.count(Project.id))
+        .outerjoin(PropertyInfo, Project.id == PropertyInfo.project_id)
+    )
+
+    # Appliquer la recherche textuelle
+    if search:
+        search_pattern = f"%{search}%"
+        counts_query = counts_query.filter(
+            or_(
+                Project.title.ilike(search_pattern),
+                Project.address.ilike(search_pattern),
+                PropertyInfo.owner_name.ilike(search_pattern)
+            )
+        )
+
+    # Filtrer par ville
+    if city:
+        counts_query = counts_query.filter(PropertyInfo.city.ilike(f"%{city}%"))
+
+    # Filtrer par consultant
+    if consultant_id:
+        counts_query = counts_query.filter(Project.user_id == consultant_id)
+
+    # Filtrer par année de construction
+    if construction_year_min:
+        counts_query = counts_query.filter(PropertyInfo.construction_year >= construction_year_min)
+    if construction_year_max:
+        counts_query = counts_query.filter(PropertyInfo.construction_year <= construction_year_max)
+
+    # Grouper et compter
+    type_counts_result = counts_query.group_by(Project.property_type).all()
+    property_type_counts = {str(t[0].value): t[1] for t in type_counts_result}
+
+    return FiltersMetadata(
+        available_cities=available_cities,
+        available_consultants=available_consultants,
+        construction_year_range=construction_year_range,
+        property_type_counts=property_type_counts
+    )
+
+
+@router.get("/dev/all", response_model=ProjectsPaginatedResponse)
+async def list_all_projects_dev(
+    # Paramètres de recherche
+    search: Optional[str] = Query(None, description="Recherche dans titre, adresse, propriétaire"),
+    # Paramètres de filtrage
+    property_types: Optional[List[PropertyType]] = Query(None, description="Types de bien"),
+    city: Optional[str] = Query(None, description="Ville"),
+    consultant_id: Optional[int] = Query(None, description="ID du consultant créateur"),
+    construction_year_min: Optional[int] = Query(None, description="Année de construction min"),
+    construction_year_max: Optional[int] = Query(None, description="Année de construction max"),
+    # Paramètres de tri
+    sort_by: str = Query("updated_at", regex="^(created_at|updated_at|title|construction_year)$"),
+    sort_order: str = Query("desc", regex="^(asc|desc)$"),
+    # Pagination
+    page: int = Query(1, ge=1, description="Numéro de page"),
+    page_size: int = Query(20, ge=1, le=100, description="Nombre d'éléments par page"),
+    # Métadonnées
+    include_metadata: bool = Query(False, description="Inclure les métadonnées des filtres"),
+    db: Session = Depends(get_db)
+):
+    """
+    [DEV ONLY] Liste tous les projets avec filtrage, tri et pagination.
     À SUPPRIMER avant la mise en production.
     """
-    projects = (
+    # Base query avec jointures
+    query = (
         db.query(Project)
         .options(
             joinedload(Project.user),
             joinedload(Project.property_info)
         )
-        .filter(Project.deleted_at.is_(None))
-        .order_by(Project.updated_at.desc())
-        .all()
+        .outerjoin(PropertyInfo, Project.id == PropertyInfo.project_id)
     )
-    return projects
+
+    # Appliquer la recherche textuelle
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Project.title.ilike(search_pattern),
+                Project.address.ilike(search_pattern),
+                PropertyInfo.owner_name.ilike(search_pattern)
+            )
+        )
+
+    # Filtrer par types de bien
+    if property_types:
+        query = query.filter(Project.property_type.in_(property_types))
+
+    # Filtrer par ville
+    if city:
+        query = query.filter(PropertyInfo.city.ilike(f"%{city}%"))
+
+    # Filtrer par consultant
+    if consultant_id:
+        query = query.filter(Project.user_id == consultant_id)
+
+    # Filtrer par année de construction
+    if construction_year_min:
+        query = query.filter(PropertyInfo.construction_year >= construction_year_min)
+    if construction_year_max:
+        query = query.filter(PropertyInfo.construction_year <= construction_year_max)
+
+    # Compter le total avant pagination
+    total = query.count()
+
+    # Appliquer le tri
+    sort_column_map = {
+        "created_at": Project.created_at,
+        "updated_at": Project.updated_at,
+        "title": Project.title,
+        "construction_year": PropertyInfo.construction_year
+    }
+    sort_column = sort_column_map.get(sort_by, Project.updated_at)
+    order_func = desc if sort_order == "desc" else asc
+    query = query.order_by(order_func(sort_column))
+
+    # Appliquer la pagination
+    offset = (page - 1) * page_size
+    projects = query.offset(offset).limit(page_size).all()
+
+    # Calculer le nombre total de pages
+    total_pages = (total + page_size - 1) // page_size
+
+    # Construire la réponse
+    response = {
+        "projects": projects,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "filters_metadata": None
+    }
+
+    # Inclure les métadonnées si demandé
+    if include_metadata:
+        response["filters_metadata"] = _get_filters_metadata(
+            db,
+            search=search,
+            city=city,
+            consultant_id=consultant_id,
+            construction_year_min=construction_year_min,
+            construction_year_max=construction_year_max,
+        )
+
+    return response
+
+
+@router.get("/dev/filters/metadata", response_model=FiltersMetadata)
+async def get_filters_metadata_dev(
+    search: Optional[str] = Query(None, description="Recherche dans titre, adresse, propriétaire"),
+    city: Optional[str] = Query(None, description="Ville"),
+    consultant_id: Optional[int] = Query(None, description="ID du consultant créateur"),
+    construction_year_min: Optional[int] = Query(None, description="Année de construction min"),
+    construction_year_max: Optional[int] = Query(None, description="Année de construction max"),
+    db: Session = Depends(get_db)
+):
+    """
+    [DEV ONLY] Récupère les métadonnées des filtres.
+    À SUPPRIMER avant la mise en production.
+    """
+    return _get_filters_metadata(
+        db,
+        search=search,
+        city=city,
+        consultant_id=consultant_id,
+        construction_year_min=construction_year_min,
+        construction_year_max=construction_year_max,
+    )
 
 
 @router.post("/dev/create", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)

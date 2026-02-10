@@ -1,4 +1,12 @@
-import type { Project, PropertyType } from '@/types/project';
+import type {
+  Project,
+  PropertyType,
+  ProjectFilters,
+  ProjectSort,
+  ProjectPagination,
+  ProjectsResponse,
+  FiltersMetadata
+} from '@/types/project';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -37,7 +45,9 @@ export async function getRecentProjectsAuth(): Promise<Project[]> {
     throw new Error(`Erreur serveur (${response.status})`);
   }
 
-  return response.json();
+  // L'endpoint renvoie un objet paginé, on extrait les projets
+  const data: ProjectsResponse = await response.json();
+  return data.projects;
 }
 
 /**
@@ -359,6 +369,87 @@ export async function getProjectShares(projectId: number): Promise<ProjectShare[
   return response.json();
 }
 
+
+// === Fonctions pour le filtrage et la recherche ===
+
+/**
+ * Construit la query string à partir des paramètres de filtrage
+ */
+function buildQueryString(
+  filters: Partial<ProjectFilters>,
+  sort: ProjectSort,
+  pagination: ProjectPagination,
+  includeMetadata: boolean = false
+): string {
+  const params = new URLSearchParams();
+
+  // Paramètres de recherche
+  if (filters.search) {
+    params.append('search', filters.search);
+  }
+
+  // Types de bien (multi-select)
+  if (filters.propertyTypes && filters.propertyTypes.length > 0) {
+    filters.propertyTypes.forEach(type => params.append('property_types', type));
+  }
+
+  // Ville
+  if (filters.city) {
+    params.append('city', filters.city);
+  }
+
+  // Consultant
+  if (filters.consultantId) {
+    params.append('consultant_id', String(filters.consultantId));
+  }
+
+  // Plage d'années de construction
+  if (filters.constructionYearMin) {
+    params.append('construction_year_min', String(filters.constructionYearMin));
+  }
+  if (filters.constructionYearMax) {
+    params.append('construction_year_max', String(filters.constructionYearMax));
+  }
+
+  // Tri
+  params.append('sort_by', sort.sortBy);
+  params.append('sort_order', sort.sortOrder);
+
+  // Pagination
+  params.append('page', String(pagination.page));
+  params.append('page_size', String(pagination.pageSize));
+
+  // Métadonnées
+  if (includeMetadata) {
+    params.append('include_metadata', 'true');
+  }
+
+  return params.toString();
+}
+
+/**
+ * Récupère les projets avec filtrage, tri et pagination (mode dev)
+ */
+export async function getProjectsWithFilters(
+  filters: Partial<ProjectFilters>,
+  sort: ProjectSort,
+  pagination: ProjectPagination,
+  includeMetadata: boolean = false
+): Promise<ProjectsResponse> {
+  const queryString = buildQueryString(filters, sort, pagination, includeMetadata);
+
+  const response = await fetch(`${API_BASE}/api/projects/dev/all?${queryString}`, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur serveur (${response.status})`);
+      }
+
+  return response.json();
+}
 /**
  * Partage un projet avec un utilisateur
  */
@@ -422,6 +513,21 @@ export async function updateProjectShare(projectId: number, userId: number, perm
 }
 
 /**
+ * Récupère les métadonnées des filtres (mode dev)
+ */
+export async function getFiltersMetadata(): Promise<FiltersMetadata> {
+  const response = await fetch(`${API_BASE}/api/projects/dev/filters/metadata`, {
+    headers: {
+            'Content-Type': 'application/json'
+    }
+  });
+    if (!response.ok) {
+    throw new Error(`Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+ /**
  * Supprime un partage
  */
 export async function removeProjectShare(projectId: number, userId: number): Promise<void> {

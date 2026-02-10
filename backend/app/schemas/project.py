@@ -1,8 +1,8 @@
 """
 Schémas Pydantic pour les projets
 """
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, Field
+from typing import Optional, List, Tuple
 from datetime import datetime
 from app.models.project import ProjectStatus, PropertyType
 from app.schemas.user import UserBrief
@@ -95,6 +95,29 @@ class ProjectShareResponse(BaseModel):
     permission: str
     created_at: Optional[datetime] = None
     user: Optional[UserBrief] = None
+
+    class Config:
+        from_attributes = True
+
+
+# === Schémas pour filtrage et pagination ===
+
+class FiltersMetadata(BaseModel):
+    """Métadonnées pour les options de filtres"""
+    available_cities: List[str]
+    available_consultants: List[UserBrief]
+    construction_year_range: Tuple[Optional[int], Optional[int]]
+    property_type_counts: dict[str, int]
+
+
+class ProjectsPaginatedResponse(BaseModel):
+    """Réponse paginée pour la liste des projets"""
+    projects: List[ProjectWithDetails]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    filters_metadata: Optional[FiltersMetadata] = None
 
     class Config:
         from_attributes = True
