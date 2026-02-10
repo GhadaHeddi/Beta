@@ -7,10 +7,11 @@ import { EvaluationProcess } from "@/app/components/evaluation/EvaluationProcess
 import { Dashboard } from "@/app/components/Dashboard";
 import { MarketTrends } from "@/app/components/MarketTrends";
 import { SearchResultsPage } from "@/app/components/SearchResultsPage";
+import { TrashPage } from "@/app/components/TrashPage";
 import type { Project } from "@/types/project";
 
 interface CurrentProject {
-  id: number | null;
+  id: number;
   title: string;
   address: string;
   propertyType: string;
@@ -18,13 +19,13 @@ interface CurrentProject {
 }
 
 export default function App() {
-  const [view, setView] = useState<"home" | "evaluation" | "dashboard" | "market-trends" | "search-results">("home");
+  const [view, setView] = useState<"home" | "evaluation" | "dashboard" | "market-trends" | "search-results"| "trash">("home");
   const [currentProject, setCurrentProject] = useState<CurrentProject | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleStartEvaluation = (title: string, address: string, propertyType: string) => {
-    setCurrentProject({ id: null, title, address, propertyType, currentStep: 1 });
+  const handleStartEvaluation = (id: number, title: string, address: string, propertyType: string) => {
+    setCurrentProject({ id, title, address, propertyType, currentStep: 1 });
     setView("evaluation");
   };
 
@@ -65,6 +66,19 @@ export default function App() {
     }
   };
 
+  const handleOpenTrash = () => {
+    setView("trash");
+  };
+
+  if (view === "trash") {
+    return (
+      <>
+        <Header onLogoClick={handleBackToHome} onDashboardClick={handleOpenDashboard} onTrashClick={handleOpenTrash} />
+        <TrashPage onBack={handleBackToHome} isAdmin={false} />
+      </>
+    );
+  }
+
   if (view === "evaluation" && currentProject) {
     return <EvaluationProcess
       projectId={currentProject.id}
@@ -80,7 +94,7 @@ export default function App() {
   if (view === "dashboard") {
     return (
       <>
-        <Header onLogoClick={handleBackToHome} onDashboardClick={handleCloseDashboard} />
+        <Header onLogoClick={handleBackToHome} onDashboardClick={handleCloseDashboard} onTrashClick={handleOpenTrash} />
         <Dashboard onBack={handleCloseDashboard} />
       </>
     );
@@ -113,6 +127,7 @@ export default function App() {
       <Header
         onLogoClick={handleBackToHome}
         onDashboardClick={handleOpenDashboard}
+        onTrashClick={handleOpenTrash}
         searchQuery={searchQuery}
         onSearch={handleSearch}
       />
@@ -123,7 +138,7 @@ export default function App() {
           <div className="h-[40vh]">
             <ProjectCreation onStartEvaluation={handleStartEvaluation} />
           </div>
-          
+
           <div className="flex-1 overflow-auto">
             <RecentProjects onProjectClick={handleOpenProject} />
           </div>

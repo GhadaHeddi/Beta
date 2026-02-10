@@ -1,11 +1,12 @@
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { CreateValueModal } from "@/app/components/CreateValueModal";
-import { createProject } from "@/services/projectService";
+import { createProjectAuth } from "@/services/projectService";
 import type { PropertyType } from "@/types/project";
 
 interface ProjectCreationProps {
   onStartEvaluation: (
+    id: number,
     title: string,
     address: string,
     propertyType: string,
@@ -20,6 +21,7 @@ export function ProjectCreation({
   const [error, setError] = useState<string | null>(null);
 
   const handleCreate = async (
+    _id: number, // Ignoré car on récupère l'ID de l'API
     title: string,
     address: string,
     propertyType: string,
@@ -29,7 +31,7 @@ export function ProjectCreation({
 
     try {
       // Appel API pour créer le projet en BDD
-      const newProject = await createProject({
+      const newProject = await createProjectAuth({
         title,
         address,
         property_type: propertyType as PropertyType,
@@ -37,9 +39,9 @@ export function ProjectCreation({
 
       console.log("Projet créé en BDD:", newProject);
 
-      // Fermer le modal et démarrer le processus d'évaluation
+      // Fermer le modal et démarrer le processus d'évaluation avec l'ID réel
       setIsModalOpen(false);
-      onStartEvaluation(title, address, propertyType);
+      onStartEvaluation(newProject.id, title, address, propertyType);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erreur lors de la création";
       setError(message);

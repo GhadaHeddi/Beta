@@ -43,6 +43,7 @@ class ProjectResponse(ProjectBase):
     current_step: int
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -75,8 +76,14 @@ class ProjectList(BaseModel):
 
 class ProjectShareCreate(BaseModel):
     """Schéma pour partager un projet"""
-    user_id: int
-    can_write: bool = True
+    user_id: Optional[int] = None  # Optionnel si on utilise email
+    email: Optional[str] = None    # Recherche par email
+    permission: str = "write"      # "read", "write", "admin"
+
+
+class ProjectShareUpdate(BaseModel):
+    """Schéma pour modifier un partage"""
+    permission: str  # "read", "write", "admin"
 
 
 class ProjectShareResponse(BaseModel):
@@ -85,6 +92,7 @@ class ProjectShareResponse(BaseModel):
     project_id: int
     user_id: int
     can_write: bool
+    permission: str
     created_at: Optional[datetime] = None
     user: Optional[UserBrief] = None
 

@@ -9,7 +9,8 @@ import {
   FileText,
   LogOut,
   ChevronRight,
-  UserPlus
+  UserPlus,
+  Trash2
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
@@ -18,6 +19,7 @@ interface ProfileDropdownProps {
   onClose: () => void;
   onLogout: () => void;
   onAddConsultant?: () => void;
+  onTrashClick?: () => void;
   userName: string;
   userEmail: string;
   userRole: string;
@@ -30,6 +32,7 @@ export function ProfileDropdown({
   onClose,
   onLogout,
   onAddConsultant,
+  onTrashClick,
   userName,
   userEmail,
   userRole,
@@ -132,6 +135,7 @@ export function ProfileDropdown({
         <MenuItem icon={User} label="Mon profil" />
         <MenuItem icon={Settings} label="Paramètres du compte" showChevron />
         <MenuItem icon={Briefcase} label="Mes projets" />
+        <MenuItem icon={Trash2} label="Corbeille" onClick={onTrashClick} />
         <MenuItem icon={BarChart3} label="Statistiques" />
       </div>
 

@@ -12,9 +12,8 @@ export function LogoutConfirmModal({ isOpen, onClose, onConfirm }: LogoutConfirm
   return (
     <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4">
       {/* Overlay */}
-      <div 
-        className="absolute inset-0 backdrop-blur-[4px]"
-        style={{ backgroundColor: 'rgba(0, 0, 0, 0.55)' }}
+      <div
+        className="absolute inset-0 bg-black/50"
         onClick={onClose}
       />
       
