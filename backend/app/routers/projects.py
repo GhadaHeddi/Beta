@@ -646,6 +646,56 @@ async def create_project(
     return project
 
 
+# === Routes de la corbeille ===
+# IMPORTANT: ces routes statiques doivent être déclarées AVANT /{project_id}
+# sinon FastAPI essaie de convertir "trash" en int → 422
+
+@router.get("/trash", response_model=List[ProjectWithDetails])
+async def list_trash_projects(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Liste les projets dans la corbeille.
+
+    - Admin : voit tous les projets dans la corbeille (de son équipe)
+    - Consultant : voit uniquement ses propres projets supprimés
+    """
+    if current_user.role == UserRole.ADMIN:
+        # Admin : tous les projets supprimés de son équipe
+        team_ids = get_team_user_ids(db, current_user)
+        projects = (
+            db.query(Project)
+            .options(
+                joinedload(Project.user),
+                joinedload(Project.property_info)
+            )
+            .filter(
+                Project.deleted_at.isnot(None),
+                Project.user_id.in_(team_ids)
+            )
+            .order_by(Project.deleted_at.desc())
+            .all()
+        )
+    else:
+        # Consultant : uniquement ses propres projets supprimés
+        projects = (
+            db.query(Project)
+            .options(
+                joinedload(Project.user),
+                joinedload(Project.property_info)
+            )
+            .filter(
+                Project.deleted_at.isnot(None),
+                Project.user_id == current_user.id
+            )
+            .order_by(Project.deleted_at.desc())
+            .all()
+        )
+
+    return projects
+
+
 @router.get("/{project_id}", response_model=ProjectWithOwner)
 async def get_project(
     project_id: int,
@@ -1151,54 +1201,6 @@ async def remove_project_share(
 
     db.delete(share)
     db.commit()
-
-
-# === Routes de la corbeille ===
-
-@router.get("/trash", response_model=List[ProjectWithDetails])
-async def list_trash_projects(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Liste les projets dans la corbeille.
-
-    - Admin : voit tous les projets dans la corbeille (de son équipe)
-    - Consultant : voit uniquement ses propres projets supprimés
-    """
-    if current_user.role == UserRole.ADMIN:
-        # Admin : tous les projets supprimés de son équipe
-        team_ids = get_team_user_ids(db, current_user)
-        projects = (
-            db.query(Project)
-            .options(
-                joinedload(Project.user),
-                joinedload(Project.property_info)
-            )
-            .filter(
-                Project.deleted_at.isnot(None),
-                Project.user_id.in_(team_ids)
-            )
-            .order_by(Project.deleted_at.desc())
-            .all()
-        )
-    else:
-        # Consultant : uniquement ses propres projets supprimés
-        projects = (
-            db.query(Project)
-            .options(
-                joinedload(Project.user),
-                joinedload(Project.property_info)
-            )
-            .filter(
-                Project.deleted_at.isnot(None),
-                Project.user_id == current_user.id
-            )
-            .order_by(Project.deleted_at.desc())
-            .all()
-        )
-
-    return projects
 
 
 @router.post("/{project_id}/restore", response_model=ProjectResponse)
