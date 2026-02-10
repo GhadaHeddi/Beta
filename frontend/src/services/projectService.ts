@@ -703,11 +703,37 @@ export async function updateComparableAdjustment(
   comparableId: number,
   adjustment: number
 ): Promise<SelectedComparable> {
-    const token = localStorage.getItem('access_token');
+  const token = localStorage.getItem('access_token');
 
   if (!token) {
     throw new Error('Non authentifie');
   }
+
+  const response = await fetch(
+    `${API_BASE}/api/projects/${projectId}/comparables/select/${comparableId}/adjustment`,
+    {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ adjustment })
+    }
+  );
+
+  if (response.status === 401) {
+    throw new Error('Session expiree');
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
  * Recupere les metadonnees des filtres (mode dev)
  */
 export async function getFiltersMetadata(): Promise<FiltersMetadata> {
@@ -738,25 +764,21 @@ export async function searchProjectsAuth(
     throw new Error('Non authentifie');
   }
 
-  const response = await fetch(
-    `${API_BASE}/api/projects/${projectId}/comparables/select/${comparableId}/adjustment`,
-    {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ adjustment })
+  const queryString = buildQueryString(filters, sort, pagination);
+
+  const response = await fetch(`${API_BASE}/api/projects/?${queryString}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
     }
-  );
+  });
 
   if (response.status === 401) {
     throw new Error('Session expiree');
   }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+    throw new Error(`Erreur serveur (${response.status})`);
   }
 
   return response.json();
@@ -798,7 +820,8 @@ export async function validateComparables(projectId: number): Promise<{ message:
   }
 
   return response.json();
-  }
+}
+
 // === Fonctions pour les fichiers ===
 
 export interface UploadedFile {

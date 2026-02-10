@@ -1,0 +1,42 @@
+[33m572461e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;31morigin/45-fix-merge-request[m[33m)[m Correction des problèmes de merge
+[33m27dfc30[m Merge pull request #41 from GhadaHeddi/8-F4-1-Affichage-de-ladresse-sur-la-carte
+[33m20866a8[m Merge pull request #39 from GhadaHeddi/7-f2-06-recherche-full-text-sur-projets-et-filtres
+[33mf11f3a9[m Merge branch 'main' into 7-f2-06-recherche-full-text-sur-projets-et-filtres
+[33mfc3cc53[m[33m ([m[1;31morigin/8-f4-1-Affichage-de-ladresse-sur-la-carte[m[33m, [m[1;31morigin/8-F4-1-Affichage-de-ladresse-sur-la-carte[m[33m)[m Merge branch 'main' into 8-F4-1-Affichage-de-ladresse-sur-la-carte
+[33m25bd203[m Merge pull request #40 from GhadaHeddi/27-f1-02---systeme-de-partage-de-projets-entre-consultants
+[33mf233225[m[33m ([m[1;31morigin/27-f1-02---systeme-de-partage-de-projets-entre-consultants[m[33m)[m feature/ajout du système de partage et finalisation du systeme de permission
+[33m9ef50fc[m F4-1 - Ajout affichage et validation adresse sur carte
+[33m1d12b25[m[33m ([m[1;31morigin/7-f2-06-recherche-full-text-sur-projets-et-filtres[m[33m, [m[1;32m7-f2-06-recherche-full-text-sur-projets-et-filtres[m[33m)[m feat(search): Implémentation recherche full-text et filtres avancés
+[33m255f84f[m[33m ([m[1;31morigin/5-f3-validation-obligatoire-formulaire-informations[m[33m)[m ouvrir et supprimer les fichiers
+[33m0375460[m feature/partage qui fonctionne mais pb avec la poubelle en authentification 422 Unprocessable Entity
+[33m0757efb[m Merge pull request #25 from GhadaHeddi/24-fixmauvaises-images-docker
+[33me0be23d[m[33m ([m[1;31morigin/24-fixmauvaises-images-docker[m[33m)[m Fix des mauvaises images et des problèmes de merge
+[33m5dc0d5b[m fix: correction guillemets dans start.sh
+[33mc5e59ad[m Merge pull request #22 from GhadaHeddi/21-f2-04-fixproblème-pendant-le-merge-perte-du-soft-delete-de-lapi
+[33mc7b2bba[m[33m ([m[1;31morigin/21-f2-04-fixproblème-pendant-le-merge-perte-du-soft-delete-de-lapi[m[33m)[m fix/resolution du pb de merge sur l'api delete de /dev/{project_id} pour le soft delete
+[33m863a4d8[m Merge pull request #20 from GhadaHeddi/5-f2-04-supprimer-un-projet
+[33mcd01db4[m[33m ([m[1;31morigin/5-f2-04-supprimer-un-projet[m[33m)[m Merge branch 'main' into 5-f2-04-supprimer-un-projet
+[33m705da88[m merge: resolve conflicts and integrate changes
+[33mbfc3340[m feature/ajout d'une visualisation de la corbeille avec restauration et suppression définitive d'éléments
+[33m11c8dcb[m Merge branch 'main' of https://github.com/GhadaHeddi/Beta
+[33m9172cb1[m feature/ajout de la suppression de projet (corbeille 15 jours puis definitif)
+[33m649751b[m Merge pull request #17 from GhadaHeddi/8-réparer-frontend-clic-sur-oryem-et-dashboard
+[33m305a68e[m Merge branch 'main' into 8-réparer-frontend-clic-sur-oryem-et-dashboard
+[33m9dc2e43[m feat: persistance des champs Informations + validation ✓ après sauvegarde
+[33m7975ec1[m Merge pull request #14 from GhadaHeddi/3-f2-02-accéder-à-un-projet-depuis-la-page-daccueil
+[33mc2ee06b[m[33m ([m[1;31morigin/3-f2-02-accéder-à-un-projet-depuis-la-page-daccueil[m[33m)[m feature/ajout du lancement d'un projet déjà crée depuis l'accueil
+[33m3ecaf0a[m feat: rendre obligatoires les champs du formulaire d'informations
+[33m30812bc[m[33m ([m[1;31morigin/8-réparer-frontend-clic-sur-oryem-et-dashboard[m[33m, [m[1;32m8-réparer-frontend-clic-sur-oryem-et-dashboard[m[33m)[m Clic Oryem et Dashboard fonctionnent partout désormais
+[33mb07167b[m Merge pull request #13 from GhadaHeddi/1-f1---création-du-service-dauth
+[33m987c224[m[33m ([m[1;31morigin/1-f1---création-du-service-dauth[m[33m, [m[1;32m1-f1---création-du-service-dauth[m[33m)[m Création d'un administrateur initial, la page de connexion est maintenant impossible à passer sans connexion, on peut maintenant créer des compte de consultant à l'aide du compte administrateur qui seront sauvegardé dans la base de donnée
+[33m428468c[m Merge pull request #12 from GhadaHeddi/1-f1---création-du-service-dauth
+[33m4887099[m Merge pull request #11 from GhadaHeddi/4-f2-03-créer-un-nouveau-projet
+[33m3e11f27[m[33m ([m[1;31morigin/4-f2-03-créer-un-nouveau-projet[m[33m)[m ajout de projet dans la base de données et API de dev sans auth + correction de var d'environnement
+[33mc36f306[m Merge pull request #10 from GhadaHeddi/2-f2-01-afficher-la-liste-des-projets-récents
+[33md653a4c[m[33m ([m[1;31morigin/2-f2-01-afficher-la-liste-des-projets-récents[m[33m)[m feature/ ajout d'une api de test dev (à enlever plus tard car avec accès admin)
+[33mc246e81[m ajout de l'affichage des projets récents si auth
+[33m7610e95[m feat(frontend): suppression inscription publique et ajout gestion consultants admin
+[33mcd2307c[m feat: implémentation complète des routes API avec authentification et permissions
+[33m3398be0[m fix(docker): Configure Docker for proxy environment
+[33md8d612c[m fix: ajouter validateurs pour parser CORS_ORIGINS et ALLOWED_EXTENSIONS depuis .env
+[33m35f893b[m premiere version
