@@ -3,7 +3,7 @@ Modele ComparablePool - Pool de biens comparables de reference
 Contient les biens issus de la base interne Arthur Loyd et des sources externes (DVF, concurrence)
 """
 from sqlalchemy import Column, Integer, String, Float, Date, DateTime, Index, Enum as SQLEnum
-from geoalchemy2 import Geography
+from geoalchemy2 import Geometry
 from datetime import datetime
 from enum import Enum
 from app.database import Base
@@ -33,7 +33,7 @@ class ComparablePool(Base):
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
     # Colonne geographique pour les requetes spatiales PostGIS
-    geom = Column(Geography(geometry_type='POINT', srid=4326), nullable=True)
+    geom = Column(Geometry(geometry_type='POINT', srid=4326), nullable=True)
 
     # Caracteristiques du bien
     property_type = Column(String, index=True, nullable=False)  # office, warehouse, retail, industrial, land, mixed
@@ -41,14 +41,14 @@ class ComparablePool(Base):
     construction_year = Column(Integer, nullable=True)
 
     # Donnees de transaction
-    transaction_type = Column(SQLEnum(TransactionType), nullable=False)
+    transaction_type = Column(SQLEnum(TransactionType, values_callable=lambda e: [x.value for x in e]), nullable=False)
     price = Column(Float, nullable=False)  # Prix total (vente) ou loyer annuel (location)
     price_per_m2 = Column(Float, nullable=False)  # Prix au m2
 
     transaction_date = Column(Date, nullable=False, index=True)
 
     # Source et reference
-    source = Column(SQLEnum(ComparableSource), nullable=False, index=True)
+    source = Column(SQLEnum(ComparableSource, values_callable=lambda e: [x.value for x in e]), nullable=False, index=True)
     source_reference = Column(String, nullable=True)  # ID externe ou reference
 
     # Photo (optionnel)

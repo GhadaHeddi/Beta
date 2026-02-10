@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -18,26 +18,31 @@ L.Icon.Default.mergeOptions({
  * Cree une icone personnalisee avec le prix affiche
  */
 const createPriceIcon = (price: number, color: string, selected: boolean) => {
-  const bgColor = color;
-  const borderColor = selected ? '#000000' : '#ffffff';
   const borderWidth = selected ? '3px' : '2px';
+  const shadow = selected ? '0 2px 8px rgba(0,0,0,0.4)' : '0 2px 6px rgba(0,0,0,0.2)';
+  const formattedPrice = Math.round(price).toLocaleString('fr-FR');
 
   return L.divIcon({
-    className: 'custom-price-marker',
+    className: '',
     html: `
       <div style="
-        background: ${bgColor};
-        border: ${borderWidth} solid ${borderColor};
-        border-radius: 6px;
-        padding: 4px 8px;
-        font-size: 11px;
-        font-weight: bold;
-        color: white;
-        white-space: nowrap;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        position: absolute;
+        left: 50%;
+        top: 50%;
         transform: translate(-50%, -50%);
+        background: #ffffff;
+        border: ${borderWidth} solid ${color};
+        border-radius: 8px;
+        padding: 4px 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #1f2937;
+        white-space: nowrap;
+        box-shadow: ${shadow};
+        cursor: pointer;
+        line-height: 1.4;
       ">
-        ${price.toLocaleString('fr-FR')} EUR
+        ${formattedPrice} <span style="font-size:10px;font-weight:400;color:#6b7280;">EUR/m\u00B2</span>
       </div>
     `,
     iconSize: [0, 0],
@@ -49,16 +54,19 @@ const createPriceIcon = (price: number, color: string, selected: boolean) => {
  * Icone pour le bien evalue (rouge, plus grande)
  */
 const evaluatedPropertyIcon = L.divIcon({
-  className: 'evaluated-marker',
+  className: '',
   html: `
     <div style="
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
       width: 28px;
       height: 28px;
       background: #EF4444;
       border: 3px solid white;
       border-radius: 50%;
       box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-      transform: translate(-50%, -50%);
     "></div>
   `,
   iconSize: [0, 0],

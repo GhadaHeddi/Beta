@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from datetime import date
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
-from geoalchemy2.functions import ST_DWithin, ST_MakePoint, ST_SetSRID, ST_Distance
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from app.models import ComparablePool, ComparableSource, TransactionType, Project, PropertyInfo, Comparable
@@ -128,15 +127,10 @@ def search_comparables(
         ComparablePool.property_type == project.property_type.value
     )
 
-    # Filtre spatial avec PostGIS
-    # ST_DWithin utilise la distance en metres pour Geography
-    center_point = ST_SetSRID(ST_MakePoint(center_lng, center_lat), 4326)
+    # Filtre spatial avec PostGIS (SQL brut pour le cast geography)
     query = query.filter(
-        ST_DWithin(
-            ComparablePool.geom,
-            center_point,
-            distance_meters
-        )
+        text("ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, :dist)")
+        .bindparams(lng=center_lng, lat=center_lat, dist=distance_meters)
     )
 
     # Appliquer les filtres de surface

@@ -60,13 +60,13 @@ export function ComparisonTable({
       </div>
 
       <div className="overflow-x-auto">
-        <Table>
+        <Table className="table-fixed w-full">
           <TableHeader>
             <TableRow className="bg-gray-50">
               <TableHead className="w-[180px] font-medium">Critere</TableHead>
-              <TableHead className="bg-blue-50 font-medium">Bien evalue</TableHead>
+              <TableHead className="bg-blue-50 font-medium" style={{ width: `calc((100% - 180px) / ${selectedComparables.length + 1})` }}>Bien evalue</TableHead>
               {selectedComparables.map((comp, index) => (
-                <TableHead key={comp.id} className="relative">
+                <TableHead key={comp.id} className="relative" style={{ width: `calc((100% - 180px) / ${selectedComparables.length + 1})` }}>
                   <div className="flex items-center justify-between">
                     <span>Comparable {index + 1}</span>
                     <Button
