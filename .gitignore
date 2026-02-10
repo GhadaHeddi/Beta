@@ -111,6 +111,10 @@ Thumbs.db
 .dmypy.json
 dmypy.json
 
+# pgadmin_exports
+pgadmin_exports/*
+pgadmin_exports
+
 # Pyre type checker
 .pyre/
 
