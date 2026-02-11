@@ -1,5 +1,7 @@
 import { MapPin, RefreshCw, ExternalLink } from "lucide-react";
 import { MarketIndicators } from "@/app/components/MarketIndicators";
+import { ProjectsMap } from "@/app/components/ProjectsMap";
+import type { Project } from "@/types/project";
 
 interface Offer {
   id: string;
@@ -88,26 +90,12 @@ const platformStyles = {
   PAP: "bg-purple-100 text-purple-700 border-purple-200",
 };
 
-export function OffersPanel({ onViewMarketTrends }: { onViewMarketTrends: (city: string) => void }) {
+export function OffersPanel({ onViewMarketTrends, onProjectClick }: { onViewMarketTrends: (city: string) => void; onProjectClick?: (project: Project) => void }) {
   return (
     <div className="bg-gray-50 border-l border-gray-200 flex flex-col h-full">
-      {/* ====== HAUT : CARTE SIMULÉE ====== */}
-      <div className="relative h-1/4 min-h-[120px] border-b border-gray-200 group overflow-hidden">
-        <img
-          src="https://arc-anglerfish-eu-central-1-prod-leparisien.s3.amazonaws.com/public/5UAWECLJVFOXQS6RPEGA3XXU3M.jpg"
-          alt="Carte des biens en cours"
-          className="w-full h-full object-cover"
-        />
-
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black/30 transition-opacity duration-300 group-hover:opacity-0" />
-
-        {/* Texte overlay */}
-        <div className="absolute bottom-3 left-4 right-4 text-white transition-opacity duration-300 group-hover:opacity-0">
-          <p className="text-sm opacity-90">
-            Vue géographique des avis en cours
-          </p>
-        </div>
+      {/* ====== HAUT : CARTE INTERACTIVE ====== */}
+      <div className="relative h-1/4 min-h-[180px] border-b border-gray-200 overflow-hidden">
+        <ProjectsMap onProjectClick={onProjectClick} />
       </div>
 
       {/* ====== INDICATEURS DE MARCHÉ ====== */}

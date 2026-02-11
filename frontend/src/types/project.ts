@@ -22,6 +22,8 @@ export interface PropertyInfoBrief {
   total_surface: number | null;
   occupant_name: string | null;
   construction_year: number | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 // Interface Project complète
