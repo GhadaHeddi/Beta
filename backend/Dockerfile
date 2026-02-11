@@ -15,15 +15,19 @@ ENV HTTPS_PROXY=${PROXY}
 ENV http_proxy=${PROXY}
 ENV https_proxy=${PROXY}
 
-# Répertoire de travail
+
 WORKDIR /app
+
+# Configuration du proxy pour dnf + désactivation zchunk (incompatible avec certains proxys)
+RUN echo -e "proxy=${PROXY}\nzchunk=False" >> /etc/dnf/dnf.conf
 
 # Installation des dépendances système pour PostgreSQL et PostGIS
 RUN dnf install -y \
     gcc \
     postgresql \
     libpq-devel \
-    && dnf clean all
+    && dnf clean all \
+    && sed -i '/^proxy=/d; /^zchunk=/d' /etc/dnf/dnf.conf
 
 # Nettoyer les variables proxy après l'installation
 ENV http_proxy=

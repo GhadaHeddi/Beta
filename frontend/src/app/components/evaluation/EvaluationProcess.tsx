@@ -281,7 +281,13 @@ export function EvaluationProcess({
           />
         );
       case "analysis":
-        return <AnalysisStep />;
+        return (
+          <AnalysisStep
+            projectId={projectId}
+            onStepComplete={() => setStepsCompletion(prev => ({ ...prev, analysis: true }))}
+            onGoToComparison={() => setActiveTab("comparison")}
+          />
+        );
 
       case "simulation":
         return <SimulationStep />;
