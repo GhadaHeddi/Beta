@@ -27,13 +27,13 @@ export function ProgressBar({ activeTab, stepsCompletion }: ProgressBarProps) {
       percentage: 40,
     },
     {
-      id: "Analysis",
+      id: "analysis",
       label: "Analyse",
       shortLabel: "Analyse",
       percentage: 60,
     },
     {
-      id: "Simulation",
+      id: "simulation",
       label: "Simulation",
       shortLabel: "Simulation",
       percentage: 80,
