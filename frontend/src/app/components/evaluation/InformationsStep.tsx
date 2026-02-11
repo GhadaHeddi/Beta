@@ -199,19 +199,22 @@ export function InformationsStep({
   }, []);
 
   // Fonction appelée quand l'utilisateur confirme l'adresse
-  const handleConfirmAddress = async (lat: number, lng: number) => {
+  const handleConfirmAddress = async (lat: number, lng: number, displayName: string) => {
     setConfirmedCoords({ lat, lng });
     onCoordinatesChange?.(lat, lng);
+    // Mettre à jour le formulaire avec l'adresse exacte retournée par l'API
+    onFormDataChange({ ...formData, address: displayName });
+    setAddressToValidate(displayName);
     onAddressValidatedChange(true);
     setIsValidatingAddress(false);
     // Scroll vers le haut du formulaire
     formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-    // Sauvegarder l'adresse et les coordonnées en base
+    // Sauvegarder l'adresse exacte et les coordonnées en base
     try {
       await Promise.all([
         savePropertyInfo(projectId, { latitude: lat, longitude: lng }),
-        updateProject(projectId, { address: formData.address }),
+        updateProject(projectId, { address: displayName }),
       ]);
     } catch (error) {
       console.error("Erreur sauvegarde adresse:", error);
