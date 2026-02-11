@@ -280,7 +280,7 @@ export function EvaluationProcess({
             onStepComplete={() => setStepsCompletion(prev => ({ ...prev, comparison: true }))}
           />
         );
-      case "Analysis":
+      case "analysis":
         return <AnalysisStep />;
 
       case "simulation":

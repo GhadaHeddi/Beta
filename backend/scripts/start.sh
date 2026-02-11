@@ -10,7 +10,8 @@ echo "🌱 Seed administrateur"
 python scripts/seed_admin.py
 
 echo "peuplement de la base de données"
-python scripts/seed_admin.py
+python scripts/seed_data.py
+python scripts/seed_comparable_pool.py
 
 echo "🚀 Démarrage du serveur..."
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
