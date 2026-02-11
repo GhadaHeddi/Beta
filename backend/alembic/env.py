@@ -27,6 +27,8 @@ from app.models import (
     AnalysisResult,
     Simulation,
     DocumentGeneration,
+    PropertyBreakdown,
+    MarketEstimation,
 )
 
 # this is the Alembic Config object, which provides

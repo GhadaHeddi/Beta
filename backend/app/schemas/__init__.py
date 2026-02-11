@@ -12,6 +12,15 @@ from app.schemas.user import (
     LoginRequest,
     ChangePasswordRequest,
 )
+from app.schemas.analysis import (
+    PropertyBreakdownCreate,
+    PropertyBreakdownUpdate,
+    PropertyBreakdownResponse,
+    PropertyBreakdownBulk,
+    PropertyBreakdownBulkItem,
+    MarketEstimationUpdate,
+    MarketEstimationResponse,
+)
 from app.schemas.project import (
     ProjectBase,
     ProjectCreate,
@@ -43,4 +52,12 @@ __all__ = [
     "ProjectList",
     "ProjectShareCreate",
     "ProjectShareResponse",
+    # Analysis schemas
+    "PropertyBreakdownCreate",
+    "PropertyBreakdownUpdate",
+    "PropertyBreakdownResponse",
+    "PropertyBreakdownBulk",
+    "PropertyBreakdownBulkItem",
+    "MarketEstimationUpdate",
+    "MarketEstimationResponse",
 ]

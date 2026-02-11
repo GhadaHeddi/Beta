@@ -120,3 +120,4 @@ pgadmin_exports
 
 # pytype static type analyzer
 .pytype/
+.env
