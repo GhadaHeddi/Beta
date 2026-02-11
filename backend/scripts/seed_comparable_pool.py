@@ -188,15 +188,8 @@ def main():
         existing_count = db.query(ComparablePool).count()
         if existing_count > 0:
             print(f"\n{existing_count} comparables existent deja dans la base.")
-            response = input("Voulez-vous les supprimer et recreer? (o/n): ")
-            if response.lower() == 'o':
-                db.query(ComparablePool).delete()
-                db.commit()
-                print("Donnees existantes supprimees.")
-            else:
-                print("Operation annulee.")
-                return
-
+            db.query(ComparablePool).delete()
+            db.commit()
         # Creer les donnees
         print("\nCreation des biens comparables...")
         comparables = create_comparable_pool_data(db)

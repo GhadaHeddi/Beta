@@ -92,7 +92,7 @@ def create_projects(db: Session, consultants: list[User]) -> list[Project]:
     projects_data = [
         {
             "title": "Tour Montparnasse - Bureaux",
-            "address": "33 Avenue du Maine 75015 Paris",
+            "address": "33 Avenue du Maine, 75015 Paris",
             "property_type": PropertyType.OFFICE,
             "status": ProjectStatus.IN_PROGRESS,
             "current_step": 3,
@@ -100,23 +100,23 @@ def create_projects(db: Session, consultants: list[User]) -> list[Project]:
         },
         {
             "title": "Entrepôt Logistique Roissy",
-            "address": "Zone Technique 95700 Roissy-en-France",
+            "address": "Zone Technique, 95700 Roissy-en-France",
             "property_type": PropertyType.WAREHOUSE,
             "status": ProjectStatus.DRAFT,
             "current_step": 1,
             "consultant_index": 1
         },
         {
-            "title": "Centre Commercial Les Halles",
-            "address": "101 Porte Berger 75001 Paris",
-            "property_type": PropertyType.RETAIL,
+            "title": "Arthur Loyd Valence",
+            "address": "19 avenue des Langories, 26000 Valence",
+            "property_type": PropertyType.OFFICE,
             "status": ProjectStatus.COMPLETED,
             "current_step": 5,
             "consultant_index": 2
         },
         {
             "title": "Local Industriel Gennevilliers",
-            "address": "106 Av. du Vieux Chemin de Saint-Denis 92230 Gennevilliers",
+            "address": "106 Av. du Vieux Chemin de Saint-Denis, 92230 Gennevilliers",
             "property_type": PropertyType.INDUSTRIAL,
             "status": ProjectStatus.IN_PROGRESS,
             "current_step": 2,
@@ -124,7 +124,7 @@ def create_projects(db: Session, consultants: list[User]) -> list[Project]:
         },
         {
             "title": "Terrain Constructible Versailles",
-            "address": "4 Avenue de Paris 78000 Versailles",
+            "address": "4 Avenue de Paris, 78000 Versailles",
             "property_type": PropertyType.LAND,
             "status": ProjectStatus.DRAFT,
             "current_step": 1,
