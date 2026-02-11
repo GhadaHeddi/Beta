@@ -195,6 +195,8 @@ export interface PropertyInfoData {
   total_surface?: number;
   terrain_surface?: number;
   geographic_sector?: string;
+  latitude?: number;
+  longitude?: number;
   swot_strengths?: string;
   swot_weaknesses?: string;
   swot_opportunities?: string;
@@ -226,6 +228,26 @@ export async function savePropertyInfo(projectId: number, data: PropertyInfoData
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Recupere les informations du bien pour un projet
+ * Utilise l'endpoint de dev (sans auth) pour les tests.
+ * @param projectId ID du projet
+ * @returns Les informations du bien ou null si non trouvees
+ */
+export async function getPropertyInfo(projectId: number): Promise<PropertyInfoData | null> {
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/property-info`);
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(`Erreur serveur (${response.status})`);
   }
 
   return response.json();
@@ -883,4 +905,57 @@ export async function deleteProjectFile(projectId: number, fileId: number): Prom
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.detail || `Erreur suppression (${response.status})`);
   }
+}
+
+// === Fonctions pour les propriétaires ===
+
+export interface OwnerRecord {
+  id: number;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  projects_count: number;
+}
+
+export interface OwnerCreateData {
+  name: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+}
+
+/**
+ * Recherche un propriétaire par nom (insensible à la casse)
+ */
+export async function searchOwner(name: string): Promise<OwnerRecord | null> {
+  if (!name.trim()) return null;
+
+  const params = new URLSearchParams({ name: name.trim() });
+  const response = await fetch(`${API_BASE}/api/owners/dev/search?${params}`, {
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!response.ok) return null;
+
+  const owners: OwnerRecord[] = await response.json();
+  return owners.length > 0 ? owners[0] : null;
+}
+
+/**
+ * Crée ou met à jour un propriétaire
+ */
+export async function createOwner(data: OwnerCreateData): Promise<OwnerRecord> {
+  const response = await fetch(`${API_BASE}/api/owners/dev/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
 }

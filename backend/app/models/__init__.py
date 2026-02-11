@@ -16,6 +16,7 @@ from app.models.simulation import Simulation, SimulationType
 from app.models.document_generation import DocumentGeneration, DocFormat
 from app.models.property_breakdown import PropertyBreakdown
 from app.models.market_estimation import MarketEstimation
+from app.models.owner import Owner
 
 __all__ = [
     "User",
@@ -43,4 +44,5 @@ __all__ = [
     "DocFormat",
     "PropertyBreakdown",
     "MarketEstimation",
+    "Owner",
 ]

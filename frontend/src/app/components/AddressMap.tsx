@@ -28,7 +28,7 @@ const customIcon = new L.Icon({
 
 interface AddressMapProps {
   address: string;
-  onConfirm: () => void;
+  onConfirm: (lat: number, lng: number) => void;
   onChangeAddress: () => void;
   onAddressUpdate?: (newAddress: string) => void;
   isValidating?: boolean;
@@ -172,7 +172,7 @@ export function AddressMap({
 
   // Affichage de la carte avec l'adresse géolocalisée
   return (
-    <div ref={mapRef} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div ref={mapRef} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative z-0">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
         <div className="flex items-center gap-3">
@@ -267,7 +267,7 @@ export function AddressMap({
             Changer l'adresse
           </button>
           <button
-            onClick={onConfirm}
+            onClick={() => coordinates && onConfirm(coordinates.lat, coordinates.lng)}
             disabled={isConfirmed}
             className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-colors font-medium ${
               isConfirmed

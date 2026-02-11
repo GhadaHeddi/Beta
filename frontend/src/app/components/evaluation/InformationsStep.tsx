@@ -11,9 +11,11 @@ import {
   Save,
   Check,
   AlertTriangle,
+  UserPlus,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { savePropertyInfo, uploadProjectFile, deleteProjectFile, getFileUrl } from "@/services/projectService";
+import { savePropertyInfo, uploadProjectFile, deleteProjectFile, getFileUrl, searchOwner, createOwner } from "@/services/projectService";
+import type { OwnerRecord } from "@/services/projectService";
 import { AddressMap } from "@/app/components/AddressMap";
 
 interface Document {
@@ -60,6 +62,8 @@ interface InformationsStepProps {
   onDocumentsChange: (docs: Document[]) => void;
   onStepComplete: () => void;
   onOpenDocument?: (document: Document) => void;
+  onCoordinatesChange?: (lat: number, lng: number) => void;
+  initialCoordinates?: { lat: number; lng: number };
 }
 
 export function InformationsStep({
@@ -76,6 +80,8 @@ export function InformationsStep({
   onDocumentsChange,
   onStepComplete,
   onOpenDocument,
+  onCoordinatesChange,
+  initialCoordinates,
 }: InformationsStepProps) {
   const [notesCopied, setNotesCopied] = useState(false);
   const [swotSaved, setSwotSaved] = useState(false);
@@ -83,14 +89,103 @@ export function InformationsStep({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  // Propriétaire trouvé en base (via API)
+  const [foundOwner, setFoundOwner] = useState<OwnerRecord | null>(null);
+
+  // Formulaire nouveau proprietaire
+  const [newOwnerForm, setNewOwnerForm] = useState({
+    address: "",
+    phone: "",
+    email: "",
+  });
+  const [ownerSaved, setOwnerSaved] = useState(false);
+
+  // Coordonnees confirmees (initialisees depuis les props si disponibles)
+  const [confirmedCoords, setConfirmedCoords] = useState<{ lat: number; lng: number } | null>(
+    initialCoordinates || null
+  );
+
+  // Ref pour le popover (click-outside)
+  const ownerInfoRef = useRef<HTMLDivElement>(null);
+  const infoIconRef = useRef<HTMLDivElement>(null);
+
+  const handleSaveNewOwner = async () => {
+    if (!formData.ownerName.trim()) return;
+    if (!newOwnerForm.email.trim() && !newOwnerForm.phone.trim()) {
+      alert("Veuillez renseigner au moins un email ou un telephone.");
+      return;
+    }
+    try {
+      const saved = await createOwner({
+        name: formData.ownerName.trim(),
+        address: newOwnerForm.address,
+        phone: newOwnerForm.phone,
+        email: newOwnerForm.email,
+      });
+      setFoundOwner(saved);
+      setOwnerSaved(true);
+      setTimeout(() => setOwnerSaved(false), 2000);
+    } catch (error) {
+      console.error("Erreur sauvegarde proprietaire:", error);
+      alert("Erreur lors de la sauvegarde du proprietaire");
+    }
+  };
+
+  // Recherche du propriétaire en base quand le nom change (insensible à la casse)
+  useEffect(() => {
+    const name = formData.ownerName.trim();
+    if (!name) {
+      setFoundOwner(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const owner = await searchOwner(name);
+      setFoundOwner(owner);
+      if (owner) {
+        setNewOwnerForm({ address: "", phone: "", email: "" });
+        setOwnerSaved(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [formData.ownerName]);
+
+  // Fermer le popover quand on clique en dehors
+  useEffect(() => {
+    if (!showOwnerInfo) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        ownerInfoRef.current && !ownerInfoRef.current.contains(e.target as Node) &&
+        infoIconRef.current && !infoIconRef.current.contains(e.target as Node)
+      ) {
+        setShowOwnerInfo(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showOwnerInfo]);
+
   // État pour la validation d'adresse
-  const [isValidatingAddress, setIsValidatingAddress] = useState(!isAddressValidated && !!formData.address);
+  const [isValidatingAddress, setIsValidatingAddress] = useState(!isAddressValidated && !initialCoordinates && !!formData.address);
   const [addressToValidate, setAddressToValidate] = useState(formData.address);
 
   // Refs pour le scroll
   const mapSectionRef = useRef<HTMLDivElement>(null);
   const addressFieldRef = useRef<HTMLInputElement>(null);
   const formTopRef = useRef<HTMLDivElement>(null);
+
+  // Quand isAddressValidated passe a true depuis le parent (donnees chargees), desactiver la validation
+  useEffect(() => {
+    if (isAddressValidated) {
+      setIsValidatingAddress(false);
+    }
+  }, [isAddressValidated]);
+
+  // Mettre a jour confirmedCoords si initialCoordinates change (chargement async)
+  useEffect(() => {
+    if (initialCoordinates && !confirmedCoords) {
+      setConfirmedCoords(initialCoordinates);
+    }
+  }, [initialCoordinates]);
 
   // Scroll vers la carte au chargement initial si l'adresse existe
   useEffect(() => {
@@ -104,7 +199,9 @@ export function InformationsStep({
   }, []);
 
   // Fonction appelée quand l'utilisateur confirme l'adresse
-  const handleConfirmAddress = () => {
+  const handleConfirmAddress = (lat: number, lng: number) => {
+    setConfirmedCoords({ lat, lng });
+    onCoordinatesChange?.(lat, lng);
     onAddressValidatedChange(true);
     setIsValidatingAddress(false);
     // Scroll vers le haut du formulaire
@@ -271,6 +368,8 @@ export function InformationsStep({
         construction_year: formData.year ? parseInt(formData.year) : undefined,
         materials: formData.materials || undefined,
         geographic_sector: formData.geographicSector,
+        latitude: confirmedCoords?.lat,
+        longitude: confirmedCoords?.lng,
       };
 
       await savePropertyInfo(projectId, propertyData);
@@ -509,10 +608,102 @@ export function InformationsStep({
                 <div className="relative">
                   <label className="block text-sm text-gray-700 mb-2 flex items-center gap-1">
                     Nom du propriétaire <span className="text-red-500">*</span>
-                    <Info
-                      className="w-4 h-4 text-blue-600 cursor-pointer"
-                      onClick={() => setShowOwnerInfo(!showOwnerInfo)}
-                    />
+                    <div ref={infoIconRef} className="relative inline-flex">
+                      <Info
+                        className="w-4 h-4 text-blue-600 cursor-pointer"
+                        onClick={() => setShowOwnerInfo(!showOwnerInfo)}
+                      />
+                      {showOwnerInfo && (
+                        <div ref={ownerInfoRef} className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-80 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
+                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-white"></div>
+                          {foundOwner ? (
+                            <div className="p-4 space-y-2 text-sm text-gray-700">
+                              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <span className="text-blue-700 font-semibold text-xs">
+                                    {foundOwner.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-gray-900">{foundOwner.name}</p>
+                                  <p className="text-xs text-gray-500">{foundOwner.projects_count} projet(s) en base</p>
+                                </div>
+                              </div>
+                              <p><strong>Adresse :</strong> {foundOwner.address}</p>
+                              <p><strong>Telephone :</strong> {foundOwner.phone}</p>
+                              <p><strong>Email :</strong> {foundOwner.email}</p>
+                            </div>
+                          ) : (
+                            <div className="p-4 text-sm text-gray-600">
+                              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+                                <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                                  <UserPlus className="w-4 h-4 text-amber-700" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-gray-900">Nouveau proprietaire</p>
+                                  <p className="text-xs text-gray-500">Remplissez sa fiche</p>
+                                </div>
+                              </div>
+                              {formData.ownerName.trim() ? (
+                                <div className="space-y-2 mt-2">
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Adresse</label>
+                                    <input
+                                      type="text"
+                                      value={newOwnerForm.address}
+                                      onChange={(e) => setNewOwnerForm({ ...newOwnerForm, address: e.target.value })}
+                                      placeholder="Ex: 10 Rue de la Paix, 75002 Paris"
+                                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Telephone</label>
+                                    <input
+                                      type="tel"
+                                      value={newOwnerForm.phone}
+                                      onChange={(e) => setNewOwnerForm({ ...newOwnerForm, phone: e.target.value })}
+                                      placeholder="Ex: +33 6 00 00 00 00"
+                                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Email</label>
+                                    <input
+                                      type="email"
+                                      value={newOwnerForm.email}
+                                      onChange={(e) => setNewOwnerForm({ ...newOwnerForm, email: e.target.value })}
+                                      placeholder="Ex: contact@exemple.fr"
+                                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={handleSaveNewOwner}
+                                    className="w-full mt-2 px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                                  >
+                                    {ownerSaved ? (
+                                      <>
+                                        <Check className="w-4 h-4" />
+                                        Enregistre !
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Save className="w-4 h-4" />
+                                        Enregistrer le proprietaire
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              ) : (
+                                <p className="text-gray-500">
+                                  Saisissez un nom de proprietaire pour voir ses informations.
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </label>
 
                   <input
@@ -537,27 +728,6 @@ export function InformationsStep({
                     <p className="text-red-500 text-xs mt-1">
                       {errors.ownerName}
                     </p>
-                  )}
-
-                  {showOwnerInfo && (
-                    <div className="absolute top-0 left-full ml-2 w-72 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-                      <div className="absolute top-2 -left-2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-t-transparent border-b-transparent border-r-white"></div>
-                      <div className="p-4 space-y-1 text-sm text-gray-700">
-                        <p>
-                          <strong>Nom complet:</strong> Jean Dupont
-                        </p>
-                        <p>
-                          <strong>Adresse :</strong> 123 Rue des Immeubles, 26000
-                          Valence
-                        </p>
-                        <p>
-                          <strong>Téléphone :</strong> +33 6 12 34 56 78
-                        </p>
-                        <p>
-                          <strong>Email :</strong> jean.dupont@email.com
-                        </p>
-                      </div>
-                    </div>
                   )}
                 </div>
 

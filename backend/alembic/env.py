@@ -29,6 +29,7 @@ from app.models import (
     DocumentGeneration,
     PropertyBreakdown,
     MarketEstimation,
+    Owner,
 )
 
 # this is the Alembic Config object, which provides
