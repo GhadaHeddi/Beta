@@ -28,7 +28,6 @@ from app.models import (
     Simulation,
     DocumentGeneration,
     PropertyBreakdown,
-    MarketEstimation,
     Owner,
 )
 

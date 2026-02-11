@@ -24,6 +24,16 @@ class AnalysisResult(Base):
     retained_yield_rate = Column(Float, nullable=True)  # Taux de rendement retenu
     notes = Column(Text, nullable=True)
 
+    # Estimation de marché (ex-table market_estimations)
+    sale_price_low = Column(Float, nullable=True)
+    sale_price_high = Column(Float, nullable=True)
+    sale_price_custom = Column(Float, nullable=True)
+    sale_capitalization_rate = Column(Float, default=8.0)
+    rent_low = Column(Float, nullable=True)
+    rent_high = Column(Float, nullable=True)
+    rent_custom = Column(Float, nullable=True)
+    rent_capitalization_rate = Column(Float, default=8.0)
+
     # Métadonnées
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

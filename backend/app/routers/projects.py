@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, func, desc, asc
 from typing import List, Optional
 from pathlib import Path
+from urllib.parse import quote
 import os
 import shutil
 from datetime import datetime
@@ -315,6 +316,30 @@ async def get_project_dev(
             detail="Projet non trouvé"
         )
 
+    return project
+
+
+@router.put("/dev/{project_id}", response_model=ProjectResponse)
+async def update_project_dev(
+    project_id: int,
+    project_data: ProjectUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    [DEV ONLY] Modifie un projet sans authentification.
+    À SUPPRIMER avant la mise en production.
+    """
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Projet non trouvé"
+        )
+    update_data = project_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(project, field, value)
+    db.commit()
+    db.refresh(project)
     return project
 
 
@@ -1408,10 +1433,15 @@ def get_file_dev(
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Fichier physique non trouvé")
 
+    # Nom ASCII safe pour le header (fallback) + encodage UTF-8 RFC 5987
+    ascii_name = document.name.encode("ascii", "replace").decode("ascii")
+    utf8_name = quote(document.name)
     return FileResponse(
         path=str(file_path),
         media_type=document.mime_type,
-        headers={"Content-Disposition": f'inline; filename="{document.name}"'},
+        headers={
+            "Content-Disposition": f'inline; filename="{ascii_name}"; filename*=UTF-8\'\'{utf8_name}'
+        },
     )
 
 

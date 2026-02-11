@@ -1,4 +1,4 @@
-"""add analysis tables (property_breakdowns, market_estimations)
+"""add analysis tables (property_breakdowns + market estimation columns on analysis_results)
 
 Revision ID: a1b2c3d4e5f6
 Revises: 20260210_add_project_detail_tables
@@ -38,24 +38,25 @@ def upgrade() -> None:
     )
     op.create_index('ix_property_breakdowns_project_id', 'property_breakdowns', ['project_id'])
 
-    op.create_table(
-        'market_estimations',
-        sa.Column('id', sa.Integer(), primary_key=True, autoincrement=True),
-        sa.Column('project_id', sa.Integer(), sa.ForeignKey('projects.id'), nullable=False, unique=True),
-        sa.Column('sale_price_low', sa.Float(), nullable=True),
-        sa.Column('sale_price_high', sa.Float(), nullable=True),
-        sa.Column('sale_price_custom', sa.Float(), nullable=True),
-        sa.Column('sale_capitalization_rate', sa.Float(), default=8.0),
-        sa.Column('rent_low', sa.Float(), nullable=True),
-        sa.Column('rent_high', sa.Float(), nullable=True),
-        sa.Column('rent_custom', sa.Float(), nullable=True),
-        sa.Column('rent_capitalization_rate', sa.Float(), default=8.0),
-        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now()),
-    )
+    # Ajouter les colonnes d'estimation de marché directement dans analysis_results
+    op.add_column('analysis_results', sa.Column('sale_price_low', sa.Float(), nullable=True))
+    op.add_column('analysis_results', sa.Column('sale_price_high', sa.Float(), nullable=True))
+    op.add_column('analysis_results', sa.Column('sale_price_custom', sa.Float(), nullable=True))
+    op.add_column('analysis_results', sa.Column('sale_capitalization_rate', sa.Float(), nullable=True, server_default='8.0'))
+    op.add_column('analysis_results', sa.Column('rent_low', sa.Float(), nullable=True))
+    op.add_column('analysis_results', sa.Column('rent_high', sa.Float(), nullable=True))
+    op.add_column('analysis_results', sa.Column('rent_custom', sa.Float(), nullable=True))
+    op.add_column('analysis_results', sa.Column('rent_capitalization_rate', sa.Float(), nullable=True, server_default='8.0'))
 
 
 def downgrade() -> None:
-    op.drop_table('market_estimations')
+    op.drop_column('analysis_results', 'rent_capitalization_rate')
+    op.drop_column('analysis_results', 'rent_custom')
+    op.drop_column('analysis_results', 'rent_high')
+    op.drop_column('analysis_results', 'rent_low')
+    op.drop_column('analysis_results', 'sale_capitalization_rate')
+    op.drop_column('analysis_results', 'sale_price_custom')
+    op.drop_column('analysis_results', 'sale_price_high')
+    op.drop_column('analysis_results', 'sale_price_low')
     op.drop_index('ix_property_breakdowns_project_id', table_name='property_breakdowns')
     op.drop_table('property_breakdowns')
