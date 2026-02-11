@@ -27,6 +27,7 @@ from app.models import (
     AnalysisResult,
     Simulation,
     DocumentGeneration,
+    Owner,
 )
 
 # this is the Alembic Config object, which provides
