@@ -62,6 +62,8 @@ interface InformationsStepProps {
   onDocumentsChange: (docs: Document[]) => void;
   onStepComplete: () => void;
   onOpenDocument?: (document: Document) => void;
+  onCoordinatesChange?: (lat: number, lng: number) => void;
+  initialCoordinates?: { lat: number; lng: number };
 }
 
 export function InformationsStep({
@@ -78,6 +80,8 @@ export function InformationsStep({
   onDocumentsChange,
   onStepComplete,
   onOpenDocument,
+  onCoordinatesChange,
+  initialCoordinates,
 }: InformationsStepProps) {
   const [notesCopied, setNotesCopied] = useState(false);
   const [swotSaved, setSwotSaved] = useState(false);
@@ -95,6 +99,11 @@ export function InformationsStep({
     email: "",
   });
   const [ownerSaved, setOwnerSaved] = useState(false);
+
+  // Coordonnees confirmees (initialisees depuis les props si disponibles)
+  const [confirmedCoords, setConfirmedCoords] = useState<{ lat: number; lng: number } | null>(
+    initialCoordinates || null
+  );
 
   // Ref pour le popover (click-outside)
   const ownerInfoRef = useRef<HTMLDivElement>(null);
@@ -156,13 +165,27 @@ export function InformationsStep({
   }, [showOwnerInfo]);
 
   // État pour la validation d'adresse
-  const [isValidatingAddress, setIsValidatingAddress] = useState(!isAddressValidated && !!formData.address);
+  const [isValidatingAddress, setIsValidatingAddress] = useState(!isAddressValidated && !initialCoordinates && !!formData.address);
   const [addressToValidate, setAddressToValidate] = useState(formData.address);
 
   // Refs pour le scroll
   const mapSectionRef = useRef<HTMLDivElement>(null);
   const addressFieldRef = useRef<HTMLInputElement>(null);
   const formTopRef = useRef<HTMLDivElement>(null);
+
+  // Quand isAddressValidated passe a true depuis le parent (donnees chargees), desactiver la validation
+  useEffect(() => {
+    if (isAddressValidated) {
+      setIsValidatingAddress(false);
+    }
+  }, [isAddressValidated]);
+
+  // Mettre a jour confirmedCoords si initialCoordinates change (chargement async)
+  useEffect(() => {
+    if (initialCoordinates && !confirmedCoords) {
+      setConfirmedCoords(initialCoordinates);
+    }
+  }, [initialCoordinates]);
 
   // Scroll vers la carte au chargement initial si l'adresse existe
   useEffect(() => {
@@ -176,7 +199,9 @@ export function InformationsStep({
   }, []);
 
   // Fonction appelée quand l'utilisateur confirme l'adresse
-  const handleConfirmAddress = () => {
+  const handleConfirmAddress = (lat: number, lng: number) => {
+    setConfirmedCoords({ lat, lng });
+    onCoordinatesChange?.(lat, lng);
     onAddressValidatedChange(true);
     setIsValidatingAddress(false);
     // Scroll vers le haut du formulaire
@@ -343,6 +368,8 @@ export function InformationsStep({
         construction_year: formData.year ? parseInt(formData.year) : undefined,
         materials: formData.materials || undefined,
         geographic_sector: formData.geographicSector,
+        latitude: confirmedCoords?.lat,
+        longitude: confirmedCoords?.lng,
       };
 
       await savePropertyInfo(projectId, propertyData);

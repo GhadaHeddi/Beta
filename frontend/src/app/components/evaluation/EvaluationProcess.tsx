@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/app/components/Header";
 import { EvaluationTabs } from "@/app/components/evaluation/EvaluationTabs";
 import { InformationsStep } from "@/app/components/evaluation/InformationsStep";
@@ -8,6 +8,7 @@ import { SimulationStep } from "@/app/components/evaluation/SimulationStep";
 import { FinalisationStep } from "@/app/components/evaluation/FinalisationStep";
 import { DocumentViewer } from "@/app/components/evaluation/DocumentViewer";
 import { AIAssistant } from "@/app/components/evaluation/AIAssistant";
+import { getPropertyInfo, getProjectFiles, getFileUrl } from "@/services/projectService";
 
 interface Document {
   id: string;
@@ -104,6 +105,77 @@ export function EvaluationProcess({
 
   const [isAddressValidated, setIsAddressValidated] = useState(false);
 
+  const [savedLatitude, setSavedLatitude] = useState<number | null>(null);
+  const [savedLongitude, setSavedLongitude] = useState<number | null>(null);
+
+  // Charger les donnees sauvegardees au montage
+  useEffect(() => {
+    async function loadSavedData() {
+      try {
+        // Charger les informations du bien
+        const propertyInfo = await getPropertyInfo(projectId);
+        if (propertyInfo) {
+          setInformationsFormData((prev) => ({
+            ...prev,
+            ownerName: propertyInfo.owner_name || "",
+            occupantName: propertyInfo.occupant_name || "",
+            year: propertyInfo.construction_year ? String(propertyInfo.construction_year) : "",
+            materials: propertyInfo.materials || "",
+            geographicSector: propertyInfo.geographic_sector || "",
+          }));
+
+          setInformationsSwot({
+            strengths: propertyInfo.swot_strengths || "",
+            weaknesses: propertyInfo.swot_weaknesses || "",
+            opportunities: propertyInfo.swot_opportunities || "",
+            threats: propertyInfo.swot_threats || "",
+          });
+
+          setInformationsNotes(propertyInfo.notes || "");
+
+          if (propertyInfo.latitude && propertyInfo.longitude) {
+            setSavedLatitude(propertyInfo.latitude);
+            setSavedLongitude(propertyInfo.longitude);
+            setIsAddressValidated(true);
+          }
+        }
+
+        // Charger les documents
+        const files = await getProjectFiles(projectId);
+        if (files.length > 0) {
+          const docs: Document[] = files.map((f) => ({
+            id: String(f.id),
+            serverId: f.id,
+            name: f.name,
+            size: formatFileSize(f.size),
+            date: new Date(f.uploaded_at).toLocaleDateString("fr-FR"),
+            icon: f.mime_type?.startsWith("image/") ? "\uD83D\uDDBC\uFE0F" : "\uD83D\uDCC4",
+            url: getFileUrl(projectId, f.id),
+            mimeType: f.mime_type,
+          }));
+          setInformationsDocuments(docs);
+        }
+      } catch (error) {
+        console.error("Erreur chargement donnees:", error);
+      }
+    }
+
+    loadSavedData();
+  }, [projectId]);
+
+  function formatFileSize(bytes: number): string {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+  }
+
+  const handleCoordinatesChange = (lat: number, lng: number) => {
+    setSavedLatitude(lat);
+    setSavedLongitude(lng);
+  };
+
   const [stepsCompletion, setStepsCompletion] = useState<Record<string, boolean>>(
     {
       informations: false,
@@ -184,6 +256,12 @@ export function EvaluationProcess({
               setStepsCompletion((prev) => ({ ...prev, informations: true }))
             }
             onOpenDocument={handleOpenDocument}
+            onCoordinatesChange={handleCoordinatesChange}
+            initialCoordinates={
+              savedLatitude && savedLongitude
+                ? { lat: savedLatitude, lng: savedLongitude }
+                : undefined
+            }
           />
         );
 
@@ -193,10 +271,10 @@ export function EvaluationProcess({
             projectId={projectId}
             evaluatedProperty={{
               address: projectAddress,
-              surface: informationsFormData.year ? null : null, // TODO: add surface to form
+              surface: null,
               construction_year: informationsFormData.year ? parseInt(informationsFormData.year) : null,
-              latitude: null, // Sera recupere depuis PropertyInfo via l'API
-              longitude: null,
+              latitude: savedLatitude,
+              longitude: savedLongitude,
               property_type: propertyType,
             }}
             onStepComplete={() => setStepsCompletion(prev => ({ ...prev, comparison: true }))}
@@ -229,6 +307,12 @@ export function EvaluationProcess({
               setStepsCompletion((prev) => ({ ...prev, informations: true }))
             }
             onOpenDocument={handleOpenDocument}
+            onCoordinatesChange={handleCoordinatesChange}
+            initialCoordinates={
+              savedLatitude && savedLongitude
+                ? { lat: savedLatitude, lng: savedLongitude }
+                : undefined
+            }
           />
         );
     }

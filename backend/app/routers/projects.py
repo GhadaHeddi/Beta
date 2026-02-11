@@ -318,6 +318,32 @@ async def get_project_dev(
     return project
 
 
+@router.get("/dev/{project_id}/property-info", response_model=PropertyInfoResponse)
+async def get_property_info_dev(
+    project_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    [DEV ONLY] Récupère les informations du bien sans authentification.
+    À SUPPRIMER avant la mise en production.
+    """
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Projet non trouvé"
+        )
+
+    if not project.property_info:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Informations du bien non trouvées"
+        )
+
+    return project.property_info
+
+
 @router.put("/dev/{project_id}/property-info", response_model=PropertyInfoResponse)
 async def update_property_info_dev(
     project_id: int,

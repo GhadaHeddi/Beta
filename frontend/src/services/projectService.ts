@@ -195,6 +195,8 @@ export interface PropertyInfoData {
   total_surface?: number;
   terrain_surface?: number;
   geographic_sector?: string;
+  latitude?: number;
+  longitude?: number;
   swot_strengths?: string;
   swot_weaknesses?: string;
   swot_opportunities?: string;
@@ -226,6 +228,26 @@ export async function savePropertyInfo(projectId: number, data: PropertyInfoData
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Recupere les informations du bien pour un projet
+ * Utilise l'endpoint de dev (sans auth) pour les tests.
+ * @param projectId ID du projet
+ * @returns Les informations du bien ou null si non trouvees
+ */
+export async function getPropertyInfo(projectId: number): Promise<PropertyInfoData | null> {
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}/property-info`);
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(`Erreur serveur (${response.status})`);
   }
 
   return response.json();
