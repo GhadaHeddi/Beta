@@ -28,7 +28,7 @@ const customIcon = new L.Icon({
 
 interface AddressMapProps {
   address: string;
-  onConfirm: () => void;
+  onConfirm: (lat: number, lng: number) => void;
   onChangeAddress: () => void;
   onAddressUpdate?: (newAddress: string) => void;
   isValidating?: boolean;
@@ -267,7 +267,7 @@ export function AddressMap({
             Changer l'adresse
           </button>
           <button
-            onClick={onConfirm}
+            onClick={() => coordinates && onConfirm(coordinates.lat, coordinates.lng)}
             disabled={isConfirmed}
             className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-colors font-medium ${
               isConfirmed
