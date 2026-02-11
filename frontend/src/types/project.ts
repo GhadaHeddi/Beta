@@ -29,6 +29,7 @@ export interface Project {
   id: number;
   title: string;
   address: string;
+  long_address: string | null;
   property_type: PropertyType;
   status: ProjectStatus;
   user_id: number;

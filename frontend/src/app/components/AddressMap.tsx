@@ -28,9 +28,9 @@ const customIcon = new L.Icon({
 
 interface AddressMapProps {
   address: string;
-  onConfirm: (lat: number, lng: number, displayName: string) => void;
+  onConfirm: (lat: number, lng: number, shortAddress: string, longAddress: string) => void;
   onChangeAddress: () => void;
-  onAddressUpdate?: (newAddress: string) => void;
+  onAddressUpdate?: (shortAddress: string) => void;
   isValidating?: boolean;
   isConfirmed?: boolean;
 }
@@ -111,19 +111,20 @@ export function AddressMap({
 
     try {
       // Géocodage inverse pour obtenir l'adresse
-      const newAddress = await reverseGeocode(position.lat, position.lng);
+      const result = await reverseGeocode(position.lat, position.lng);
 
-      if (newAddress) {
+      if (result) {
         // Mettre à jour les coordonnées locales
         setCoordinates({
           lat: position.lat,
           lng: position.lng,
-          displayName: newAddress,
+          displayName: result.displayName,
+          shortAddress: result.shortAddress,
           found: true,
         });
 
-        // Notifier le parent du changement d'adresse
-        onAddressUpdate?.(newAddress);
+        // Notifier le parent du changement d'adresse (courte pour le formulaire)
+        onAddressUpdate?.(result.shortAddress);
       }
     } catch (err) {
       console.error('Erreur lors du géocodage inverse:', err);
@@ -268,7 +269,7 @@ export function AddressMap({
             </div>
           ) : (
             <button
-              onClick={() => coordinates && onConfirm(coordinates.lat, coordinates.lng, coordinates.displayName)}
+              onClick={() => coordinates && onConfirm(coordinates.lat, coordinates.lng, coordinates.shortAddress, coordinates.displayName)}
               className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors font-medium"
             >
               <Check className="w-5 h-5" />

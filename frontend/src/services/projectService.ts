@@ -185,7 +185,7 @@ export async function restoreProjectAuth(projectId: number): Promise<Project> {
 /**
  * Met a jour un projet (adresse, titre, etc.)
  */
-export async function updateProject(projectId: number, data: Partial<ProjectCreateData>): Promise<Project> {
+export async function updateProject(projectId: number, data: Partial<ProjectCreateData> & { long_address?: string }): Promise<Project> {
   const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

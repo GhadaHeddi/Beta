@@ -28,6 +28,7 @@ class ProjectUpdate(BaseModel):
     """Schéma pour modifier un projet"""
     title: Optional[str] = None
     address: Optional[str] = None
+    long_address: Optional[str] = None
     property_type: Optional[PropertyType] = None
     status: Optional[ProjectStatus] = None
     current_step: Optional[int] = None
@@ -39,6 +40,7 @@ class ProjectResponse(ProjectBase):
     """Schéma de réponse projet"""
     id: int
     user_id: int
+    long_address: Optional[str] = None
     status: ProjectStatus
     current_step: int
     created_at: Optional[datetime] = None

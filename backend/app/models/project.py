@@ -33,6 +33,7 @@ class Project(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String, nullable=False)
     address = Column(String, nullable=False)
+    long_address = Column(String, nullable=True)
     property_type = Column(SQLEnum(PropertyType), nullable=False)
     status = Column(SQLEnum(ProjectStatus), default=ProjectStatus.DRAFT)
     current_step = Column(Integer, default=1)  # Étape actuelle (1-5)
