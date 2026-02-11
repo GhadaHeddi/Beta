@@ -1,0 +1,220 @@
+erDiagram
+    users ||--o{ projects : "owns"
+    users ||--o{ users : "manages"
+    users ||--o{ project_shares : "shared_with"
+    
+    projects ||--|| property_infos : "has"
+    projects ||--o{ comparables : "contains"
+    projects ||--o{ valuations : "has"
+    projects ||--o{ project_surfaces : "has"
+    projects ||--o{ simulations : "has"
+    projects ||--o{ documents : "attached_to"
+    projects ||--o{ document_generations : "generates"
+    projects ||--o{ project_shares : "shared"
+    
+    users {
+        int id PK
+        varchar email
+        varchar password_hash
+        varchar first_name
+        varchar last_name
+        varchar phone
+        varchar avatar_url
+        varchar role
+        int admin_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    projects {
+        int id PK
+        int user_id FK
+        varchar title
+        varchar address
+        varchar property_type
+        varchar status
+        int current_step
+        timestamp created_at
+        timestamp updated_at
+        timestamp deleted_at
+    }
+    
+    property_infos {
+        int id PK
+        int project_id FK
+        varchar owner_name
+        varchar owner_contact
+        varchar occupant_name
+        varchar occupant_contact
+        int construction_year
+        varchar materials
+        double total_surface
+        double terrain_surface
+        int number_of_floors
+        int parking_spaces
+        double latitude
+        double longitude
+        varchar postal_code
+        varchar city
+        varchar geographic_sector
+        varchar plu_zone
+        text plu_regulation
+        text oap
+        text servitudes
+        text flood_zones
+        text swot_strengths
+        text swot_weaknesses
+        text swot_opportunities
+        text swot_threats
+        text notes
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    comparables {
+        int id PK
+        int project_id FK
+        varchar address
+        varchar postal_code
+        varchar city
+        double surface
+        double price
+        double price_per_m2
+        double distance
+        double latitude
+        double longitude
+        date transaction_date
+        int construction_year
+        double adjustment
+        double adjusted_price_per_m2
+        boolean validated
+        varchar validation_notes
+        varchar source
+        varchar source_reference
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    comparable_pool {
+        int id PK
+        varchar address
+        varchar postal_code
+        varchar city
+        double latitude
+        double longitude
+        varchar property_type
+        double surface
+        int construction_year
+        varchar transaction_type
+        double price
+        double price_per_m2
+        date transaction_date
+        varchar source
+        varchar source_reference
+        varchar photo_url
+        geometry geom
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    dvf_records {
+        int id PK
+        varchar mutation_id
+        date mutation_date
+        varchar nature_mutation
+        double valeur_fonciere
+        varchar adresse
+        varchar code_postal
+        varchar commune
+        varchar code_commune
+        varchar departement
+        varchar type_local
+        varchar code_type_local
+        double surface_reelle_bati
+        double surface_terrain
+        int nombre_pieces_principales
+        double latitude
+        double longitude
+        geography geom
+        varchar numero_disposition
+    }
+    
+    valuations {
+        int id PK
+        int project_id FK
+        varchar method
+        double value
+        double weight
+        json parameters
+        varchar notes
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    project_surfaces {
+        int id PK
+        int project_id FK
+        varchar level
+        varchar surface_type
+        double area_sqm
+        double rental_value_per_sqm
+        double weighting
+        varchar notes
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    simulations {
+        int id PK
+        int project_id FK
+        varchar simulation_type
+        varchar name
+        json input_data
+        json output_data
+        varchar notes
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    documents {
+        int id PK
+        int project_id FK
+        varchar name
+        varchar file_path
+        varchar file_type
+        varchar mime_type
+        int size
+        varchar description
+        timestamp uploaded_at
+    }
+    
+    document_generations {
+        int id PK
+        int project_id FK
+        varchar doc_format
+        varchar template_name
+        double retained_value
+        double retained_yield_rate
+        json included_sections
+        varchar file_path
+        timestamp generated_at
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    project_shares {
+        int id PK
+        int project_id FK
+        int user_id FK
+        boolean can_write
+        varchar permission
+        timestamp created_at
+    }
+    
+    spatial_ref_sys {
+        int srid PK
+        varchar auth_name
+        int auth_srid
+        varchar srtext
+        varchar proj4text
+    }
