@@ -46,6 +46,43 @@ def create_comparable_pool_data(db: Session) -> list:
         # Roissy (logistique)
         {"lat": 49.0097, "lng": 2.5479, "city": "Roissy-en-France", "postal_code": "95700", "sector": "roissy"},
         {"lat": 49.0050, "lng": 2.5400, "city": "Roissy-en-France", "postal_code": "95700", "sector": "roissy"},
+        # =========================
+        # VALENCE (DROME)
+        # =========================
+        {"lat": 44.9334, "lng": 4.8924, "city": "Valence", "postal_code": "26000", "sector": "valence_centre"},
+        {"lat": 44.9315, "lng": 4.8890, "city": "Valence", "postal_code": "26000", "sector": "valence_centre"},
+        {"lat": 44.9360, "lng": 4.8955, "city": "Valence", "postal_code": "26000", "sector": "valence_centre"},
+        {"lat": 44.9285, "lng": 4.9000, "city": "Valence", "postal_code": "26000", "sector": "valence_centre"},
+
+        # Zone Briffaut / Lautagne (tertiaire / activite)
+        {"lat": 44.9050, "lng": 4.8730, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+        {"lat": 44.9075, "lng": 4.8780, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+        {"lat": 44.9100, "lng": 4.8700, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+
+        # Rovaltain / Gare TGV (Alixan - proche Valence)
+        {"lat": 44.9910, "lng": 4.9750, "city": "Alixan", "postal_code": "26300", "sector": "valence_tgv"},
+        {"lat": 44.9885, "lng": 4.9700, "city": "Alixan", "postal_code": "26300", "sector": "valence_tgv"},
+        {"lat": 44.9930, "lng": 4.9800, "city": "Alixan", "postal_code": "26300", "sector": "valence_tgv"},
+
+        # Portes-les-Valence (industriel / logistique)
+        {"lat": 44.8750, "lng": 4.8750, "city": "Portes-les-Valence", "postal_code": "26800", "sector": "valence_industriel"},
+        {"lat": 44.8700, "lng": 4.8800, "city": "Portes-les-Valence", "postal_code": "26800", "sector": "valence_industriel"},
+        {"lat": 44.8725, "lng": 4.8680, "city": "Portes-les-Valence", "postal_code": "26800", "sector": "valence_industriel"},
+        # Lautagne (Valence - zone tertiaire / activite)
+        {"lat": 44.9065, "lng": 4.9013, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+        {"lat": 44.9048, "lng": 4.9025, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+        {"lat": 44.9082, "lng": 4.9017, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+        {"lat": 44.9095, "lng": 4.9006, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+        {"lat": 44.9052, "lng": 4.8999, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+        {"lat": 44.9078, "lng": 4.9034, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+        # Lautagne (Valence - zone tertiaire / activite)
+        {"lat": 44.9065, "lng": 4.8715, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+        {"lat": 44.9048, "lng": 4.8682, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+        {"lat": 44.9082, "lng": 4.8738, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+        {"lat": 44.9095, "lng": 4.8690, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+        {"lat": 44.9052, "lng": 4.8750, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+        {"lat": 44.9078, "lng": 4.8665, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+
     ]
 
     # Types de biens avec caracteristiques typiques
@@ -92,12 +129,18 @@ def create_comparable_pool_data(db: Session) -> list:
 
     for i, loc in enumerate(locations):
         # Determiner le type de bien selon le secteur
-        if loc["sector"] in ["centre", "defense", "neuilly"]:
+        if loc["sector"] in ["centre", "defense", "neuilly", "valence_centre", "valence_tgv"]:
             property_types = ["office", "retail"]
-        elif loc["sector"] in ["saintdenis", "gennevilliers"]:
+
+        elif loc["sector"] in ["saintdenis", "gennevilliers", "valence_industriel"]:
             property_types = ["warehouse", "industrial"]
+
+        elif loc["sector"] == "valence_activite":
+            property_types = ["office", "warehouse", "industrial"]
+
         elif loc["sector"] == "roissy":
             property_types = ["warehouse", "land"]
+
         else:
             property_types = ["office", "retail"]
 

@@ -11,6 +11,8 @@ class PropertyInfoBrief(BaseModel):
     total_surface: Optional[float] = None
     occupant_name: Optional[str] = None
     construction_year: Optional[int] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
     class Config:
         from_attributes = True

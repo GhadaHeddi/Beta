@@ -210,7 +210,7 @@ export default function App() {
 
             {/* Panneau latéral droit (22%) */}
             <div className="w-[22%] flex-shrink-0">
-              <OffersPanel onViewMarketTrends={handleViewMarketTrends} />
+              <OffersPanel onViewMarketTrends={handleViewMarketTrends} onProjectClick={handleOpenProject} />
             </div>
           </div>
         </div>
