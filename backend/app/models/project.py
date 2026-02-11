@@ -52,7 +52,6 @@ class Project(Base):
     simulations = relationship("Simulation", back_populates="project", cascade="all, delete-orphan")
     document_generations = relationship("DocumentGeneration", back_populates="project", cascade="all, delete-orphan")
     breakdowns = relationship("PropertyBreakdown", back_populates="project", cascade="all, delete-orphan")
-    market_estimation = relationship("MarketEstimation", back_populates="project", uselist=False, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Project(id={self.id}, title='{self.title}', status='{self.status}')>"

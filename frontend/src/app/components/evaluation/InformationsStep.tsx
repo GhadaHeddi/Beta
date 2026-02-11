@@ -14,7 +14,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { savePropertyInfo, uploadProjectFile, deleteProjectFile, getFileUrl, searchOwner, createOwner } from "@/services/projectService";
+import { savePropertyInfo, updateProject, uploadProjectFile, deleteProjectFile, getFileUrl, searchOwner, createOwner } from "@/services/projectService";
 import type { OwnerRecord } from "@/services/projectService";
 import { AddressMap } from "@/app/components/AddressMap";
 
@@ -199,13 +199,23 @@ export function InformationsStep({
   }, []);
 
   // Fonction appelée quand l'utilisateur confirme l'adresse
-  const handleConfirmAddress = (lat: number, lng: number) => {
+  const handleConfirmAddress = async (lat: number, lng: number) => {
     setConfirmedCoords({ lat, lng });
     onCoordinatesChange?.(lat, lng);
     onAddressValidatedChange(true);
     setIsValidatingAddress(false);
     // Scroll vers le haut du formulaire
     formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Sauvegarder l'adresse et les coordonnées en base
+    try {
+      await Promise.all([
+        savePropertyInfo(projectId, { latitude: lat, longitude: lng }),
+        updateProject(projectId, { address: formData.address }),
+      ]);
+    } catch (error) {
+      console.error("Erreur sauvegarde adresse:", error);
+    }
   };
 
   // Fonction appelée quand l'utilisateur veut changer l'adresse

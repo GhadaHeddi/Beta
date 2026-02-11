@@ -318,6 +318,30 @@ async def get_project_dev(
     return project
 
 
+@router.put("/dev/{project_id}", response_model=ProjectResponse)
+async def update_project_dev(
+    project_id: int,
+    project_data: ProjectUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    [DEV ONLY] Modifie un projet sans authentification.
+    À SUPPRIMER avant la mise en production.
+    """
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Projet non trouvé"
+        )
+    update_data = project_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(project, field, value)
+    db.commit()
+    db.refresh(project)
+    return project
+
+
 @router.get("/dev/{project_id}/property-info", response_model=PropertyInfoResponse)
 async def get_property_info_dev(
     project_id: int,

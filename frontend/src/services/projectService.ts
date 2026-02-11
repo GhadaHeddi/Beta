@@ -183,6 +183,28 @@ export async function restoreProjectAuth(projectId: number): Promise<Project> {
 }
 
 /**
+ * Met a jour un projet (adresse, titre, etc.)
+ */
+export async function updateProject(projectId: number, data: Partial<ProjectCreateData>): Promise<Project> {
+  const response = await fetch(`${API_BASE}/api/projects/dev/${projectId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  if (response.status === 404) {
+    throw new Error('Projet non trouve');
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
  * Interface pour les donnees du bien immobilier
  */
 export interface PropertyInfoData {

@@ -256,28 +256,25 @@ export function AddressMap({
         <div className="flex gap-4 justify-center">
           <button
             onClick={onChangeAddress}
-            disabled={isConfirmed}
-            className={`flex items-center gap-2 px-6 py-3 border-2 rounded-lg transition-colors font-medium ${
-              isConfirmed
-                ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
-            }`}
+            className="flex items-center gap-2 px-6 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 rounded-lg transition-colors font-medium"
           >
             <RefreshCw className="w-5 h-5" />
             Changer l'adresse
           </button>
-          <button
-            onClick={() => coordinates && onConfirm(coordinates.lat, coordinates.lng)}
-            disabled={isConfirmed}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-colors font-medium ${
-              isConfirmed
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-green-600 text-white hover:bg-green-700'
-            }`}
-          >
-            <Check className="w-5 h-5" />
-            {isConfirmed ? 'Adresse confirmée' : 'Confirmer l\'adresse'}
-          </button>
+          {isConfirmed ? (
+            <div className="flex items-center gap-2 px-6 py-3 bg-green-100 text-green-700 border-2 border-green-300 rounded-lg font-medium">
+              <Check className="w-5 h-5" />
+              Adresse confirmée
+            </div>
+          ) : (
+            <button
+              onClick={() => coordinates && onConfirm(coordinates.lat, coordinates.lng)}
+              className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors font-medium"
+            >
+              <Check className="w-5 h-5" />
+              Confirmer l'adresse
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.utils.security import get_current_user
-from app.models import User, Project, PropertyBreakdown, MarketEstimation
+from app.models import User, Project, PropertyBreakdown, AnalysisResult
 from app.schemas.analysis import (
     PropertyBreakdownCreate,
     PropertyBreakdownUpdate,
@@ -167,7 +167,7 @@ async def delete_breakdown(
     db.commit()
 
 
-# === MarketEstimation ===
+# === MarketEstimation (stocké dans analysis_results) ===
 
 @router.get("/estimation", response_model=MarketEstimationResponse)
 async def get_estimation(
@@ -179,18 +179,17 @@ async def get_estimation(
     if not can_read_project(db, current_user, project):
         raise HTTPException(status_code=403, detail="Accès refusé")
 
-    estimation = db.query(MarketEstimation).filter(
-        MarketEstimation.project_id == project_id
+    result = db.query(AnalysisResult).filter(
+        AnalysisResult.project_id == project_id
     ).first()
 
-    if not estimation:
-        # Créer avec les valeurs par défaut
-        estimation = MarketEstimation(project_id=project_id)
-        db.add(estimation)
+    if not result:
+        result = AnalysisResult(project_id=project_id, sale_capitalization_rate=8.0, rent_capitalization_rate=8.0)
+        db.add(result)
         db.commit()
-        db.refresh(estimation)
+        db.refresh(result)
 
-    return estimation
+    return result
 
 
 @router.put("/estimation", response_model=MarketEstimationResponse)
@@ -204,21 +203,21 @@ async def save_estimation(
     if not can_write_project(db, current_user, project):
         raise HTTPException(status_code=403, detail="Accès refusé")
 
-    estimation = db.query(MarketEstimation).filter(
-        MarketEstimation.project_id == project_id
+    result = db.query(AnalysisResult).filter(
+        AnalysisResult.project_id == project_id
     ).first()
 
-    if not estimation:
-        estimation = MarketEstimation(project_id=project_id)
-        db.add(estimation)
+    if not result:
+        result = AnalysisResult(project_id=project_id, sale_capitalization_rate=8.0, rent_capitalization_rate=8.0)
+        db.add(result)
 
     update_data = data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
-        setattr(estimation, key, value)
+        setattr(result, key, value)
 
     db.commit()
-    db.refresh(estimation)
-    return estimation
+    db.refresh(result)
+    return result
 
 
 # === Dev endpoints (sans auth) ===
@@ -268,24 +267,24 @@ async def dev_bulk_save_breakdowns(project_id: int, data: PropertyBreakdownBulk,
 
 @router.get("/dev/estimation", response_model=MarketEstimationResponse, tags=["Dev"])
 async def dev_get_estimation(project_id: int, db: Session = Depends(get_db)):
-    estimation = db.query(MarketEstimation).filter(MarketEstimation.project_id == project_id).first()
-    if not estimation:
-        estimation = MarketEstimation(project_id=project_id)
-        db.add(estimation)
+    result = db.query(AnalysisResult).filter(AnalysisResult.project_id == project_id).first()
+    if not result:
+        result = AnalysisResult(project_id=project_id, sale_capitalization_rate=8.0, rent_capitalization_rate=8.0)
+        db.add(result)
         db.commit()
-        db.refresh(estimation)
-    return estimation
+        db.refresh(result)
+    return result
 
 
 @router.put("/dev/estimation", response_model=MarketEstimationResponse, tags=["Dev"])
 async def dev_save_estimation(project_id: int, data: MarketEstimationUpdate, db: Session = Depends(get_db)):
-    estimation = db.query(MarketEstimation).filter(MarketEstimation.project_id == project_id).first()
-    if not estimation:
-        estimation = MarketEstimation(project_id=project_id)
-        db.add(estimation)
+    result = db.query(AnalysisResult).filter(AnalysisResult.project_id == project_id).first()
+    if not result:
+        result = AnalysisResult(project_id=project_id, sale_capitalization_rate=8.0, rent_capitalization_rate=8.0)
+        db.add(result)
     update_data = data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
-        setattr(estimation, key, value)
+        setattr(result, key, value)
     db.commit()
-    db.refresh(estimation)
-    return estimation
+    db.refresh(result)
+    return result
