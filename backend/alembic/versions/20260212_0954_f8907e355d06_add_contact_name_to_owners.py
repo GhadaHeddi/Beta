@@ -1,6 +1,6 @@
 """add contact_name to owners
 
-Revision ID: f8907e355d06
+Revision ID: add_contact_name
 Revises: 5cd3ea5add5b
 Create Date: 2026-02-12 09:54:23.162656
 
@@ -9,8 +9,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = 'f8907e355d06'
-down_revision = '5cd3ea5add5b'
+revision = 'add_contact_name'
+down_revision = 'add_property_state'
 branch_labels = None
 depends_on = None
 
