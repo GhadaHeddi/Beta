@@ -1052,3 +1052,22 @@ export async function createOwner(data: OwnerCreateData): Promise<OwnerRecord> {
 
   return response.json();
 }
+export interface GeographicZoneRecord {
+  id: number;
+  name: string;
+  agency_id: number;
+}
+
+export async function searchGeographicZones(query: string): Promise<GeographicZoneRecord[]> {
+  if (!query.trim()) return [];
+
+  const params = new URLSearchParams({ q: query.trim() });
+
+  const response = await fetch(`${API_BASE}/api/geographic-zones/dev/search?${params}`, {
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!response.ok) return [];
+
+  return response.json();
+}
