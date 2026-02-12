@@ -15,6 +15,7 @@ from app.routers.comparables import router as comparables_router
 from app.routers.analysis import router as analysis_router
 from app.routers.owners import router as owners_router
 from app.routers.agencies import router as agencies_router
+from app.routers.geographic_zones import router as geographic_zone_router
 
 app = FastAPI(
     title="ORYEM API",
@@ -76,6 +77,8 @@ app.include_router(comparables_router, prefix="/api")
 app.include_router(analysis_router, prefix="/api")
 app.include_router(owners_router, prefix="/api")
 app.include_router(agencies_router, prefix="/api")
+app.include_router(geographic_zone_router, prefix="/api")
+
 
 
 if __name__ == "__main__":

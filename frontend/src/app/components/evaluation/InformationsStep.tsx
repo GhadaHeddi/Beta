@@ -8,14 +8,13 @@ import {
   Eye,
   Clipboard,
   Send,
-  Save,
   Check,
   AlertTriangle,
   UserPlus,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { savePropertyInfo, updateProject, uploadProjectFile, deleteProjectFile, getFileUrl, searchOwner, createOwner } from "@/services/projectService";
-import type { OwnerRecord } from "@/services/projectService";
+import { savePropertyInfo, updateProject, uploadProjectFile, deleteProjectFile, getFileUrl, searchOwner, createOwner, searchGeographicZones } from "@/services/projectService";
+import type { OwnerRecord, GeographicZone } from "@/services/projectService";
 import { AddressMap } from "@/app/components/AddressMap";
 
 interface Document {
@@ -90,6 +89,11 @@ export function InformationsStep({
   const [showOwnerInfo, setShowOwnerInfo] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saved" | "error">("idle");
 
+  // Autocomplete zones géographiques
+  const [zoneSuggestions, setZoneSuggestions] = useState<GeographicZone[]>([]);
+  const [showZoneSuggestions, setShowZoneSuggestions] = useState(false);
+  const zoneInputRef = useRef<HTMLDivElement>(null);
+
   // Propriétaire trouvé en base (via API)
   const [foundOwner, setFoundOwner] = useState<OwnerRecord | null>(null);
 
@@ -100,7 +104,6 @@ export function InformationsStep({
     phone: "",
     email: "",
   });
-  const [ownerSaved, setOwnerSaved] = useState(false);
 
   // Coordonnees confirmees (initialisees depuis les props si disponibles)
   const [confirmedCoords, setConfirmedCoords] = useState<{ lat: number; lng: number } | null>(
@@ -116,59 +119,69 @@ export function InformationsStep({
     phone: "",
     email: "",
   });
-  const [occupantSaved, setOccupantSaved] = useState(false);
-
   // Ref pour le popover (click-outside)
   const ownerInfoRef = useRef<HTMLDivElement>(null);
   const infoIconRef = useRef<HTMLDivElement>(null);
   const occupantInfoRef = useRef<HTMLDivElement>(null);
   const occupantInfoIconRef = useRef<HTMLDivElement>(null);
 
-  const handleSaveNewOwner = async () => {
-    if (!formData.ownerName.trim()) return;
-    if (!newOwnerForm.email.trim() && !newOwnerForm.phone.trim()) {
-      alert("Veuillez renseigner au moins un email ou un telephone.");
-      return;
-    }
-    try {
-      const saved = await createOwner({
-        name: formData.ownerName.trim(),
-        contact_name: newOwnerForm.contact_name,
-        address: newOwnerForm.address,
-        phone: newOwnerForm.phone,
-        email: newOwnerForm.email,
-      });
-      setFoundOwner(saved);
-      setOwnerSaved(true);
-      setTimeout(() => setOwnerSaved(false), 2000);
-    } catch (error) {
-      console.error("Erreur sauvegarde proprietaire:", error);
-      alert("Erreur lors de la sauvegarde du proprietaire");
-    }
-  };
+  // Expansion du champ "Nom propriétaire" pour afficher tel/adresse/email
+  const [showOwnerContactFields, setShowOwnerContactFields] = useState(false);
+  const [showOccupantContactFields, setShowOccupantContactFields] = useState(false);
 
-  const handleSaveNewOccupant = async () => {
-    if (!formData.occupantName.trim()) return;
-    if (!newOccupantForm.email.trim() && !newOccupantForm.phone.trim()) {
-      alert("Veuillez renseigner au moins un email ou un telephone.");
+  // Auto-save SCI propriétaire
+  const autoSaveOwnerRef = useRef(false);
+  useEffect(() => {
+    if (!autoSaveOwnerRef.current) {
+      autoSaveOwnerRef.current = true;
       return;
     }
-    try {
-      const saved = await createOwner({
-        name: formData.occupantName.trim(),
-        contact_name: newOccupantForm.contact_name,
-        address: newOccupantForm.address,
-        phone: newOccupantForm.phone,
-        email: newOccupantForm.email,
-      });
-      setFoundOccupant(saved);
-      setOccupantSaved(true);
-      setTimeout(() => setOccupantSaved(false), 2000);
-    } catch (error) {
-      console.error("Erreur sauvegarde societe occupante:", error);
-      alert("Erreur lors de la sauvegarde de la societe occupante");
+    if (!formData.ownerName.trim()) return;
+    const hasData = newOwnerForm.address || newOwnerForm.phone || newOwnerForm.email || newOwnerForm.contact_name;
+    if (!hasData) return;
+    const timer = setTimeout(async () => {
+      try {
+        const saved = await createOwner({
+          name: formData.ownerName.trim(),
+          contact_name: newOwnerForm.contact_name || undefined,
+          address: newOwnerForm.address || undefined,
+          phone: newOwnerForm.phone || undefined,
+          email: newOwnerForm.email || undefined,
+        });
+        setFoundOwner(saved);
+      } catch (error) {
+        console.error("Erreur auto-save proprietaire:", error);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [newOwnerForm]);
+
+  // Auto-save SCI occupante
+  const autoSaveOccupantRef = useRef(false);
+  useEffect(() => {
+    if (!autoSaveOccupantRef.current) {
+      autoSaveOccupantRef.current = true;
+      return;
     }
-  };
+    if (!formData.occupantName.trim()) return;
+    const hasData = newOccupantForm.address || newOccupantForm.phone || newOccupantForm.email || newOccupantForm.contact_name;
+    if (!hasData) return;
+    const timer = setTimeout(async () => {
+      try {
+        const saved = await createOwner({
+          name: formData.occupantName.trim(),
+          contact_name: newOccupantForm.contact_name || undefined,
+          address: newOccupantForm.address || undefined,
+          phone: newOccupantForm.phone || undefined,
+          email: newOccupantForm.email || undefined,
+        });
+        setFoundOccupant(saved);
+      } catch (error) {
+        console.error("Erreur auto-save societe occupante:", error);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [newOccupantForm]);
 
   // Recherche du propriétaire en base quand le nom change (insensible à la casse)
   useEffect(() => {
@@ -182,7 +195,6 @@ export function InformationsStep({
       setFoundOwner(owner);
       if (owner) {
         setNewOwnerForm({ contact_name: "", address: "", phone: "", email: "" });
-        setOwnerSaved(false);
       }
     }, 400);
     return () => clearTimeout(timer);
@@ -200,7 +212,6 @@ export function InformationsStep({
       setFoundOccupant(occupant);
       if (occupant) {
         setNewOccupantForm({ contact_name: "", address: "", phone: "", email: "" });
-        setOccupantSaved(false);
       }
     }, 400);
     return () => clearTimeout(timer);
@@ -235,6 +246,34 @@ export function InformationsStep({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showOccupantInfo]);
+
+  // Recherche autocomplete zones géographiques
+  useEffect(() => {
+    const query = formData.geographicSector.trim();
+    if (!query || query.length < 2) {
+      setZoneSuggestions([]);
+      setShowZoneSuggestions(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const zones = await searchGeographicZones(query);
+      setZoneSuggestions(zones);
+      setShowZoneSuggestions(zones.length > 0);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [formData.geographicSector]);
+
+  // Fermer les suggestions quand on clique en dehors
+  useEffect(() => {
+    if (!showZoneSuggestions) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (zoneInputRef.current && !zoneInputRef.current.contains(e.target as Node)) {
+        setShowZoneSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showZoneSuggestions]);
 
   // État pour la validation d'adresse
   const [isValidatingAddress, setIsValidatingAddress] = useState(!isAddressValidated && !initialCoordinates && !!formData.address);
@@ -733,33 +772,22 @@ export function InformationsStep({
                                       className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                     />
                                   </div>
-                                  <div>
-                                    <label className="block text-xs text-gray-500 mb-1">Nom propriétaire</label>
-                                    <input
-                                      type="text"
-                                      value={newOwnerForm.contact_name}
-                                      onChange={(e) => setNewOwnerForm({ ...newOwnerForm, contact_name: e.target.value })}
-                                      placeholder="Ex: Jean Dupont"
-                                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    />
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={handleSaveNewOwner}
-                                    className="w-full mt-2 px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                                  >
-                                    {ownerSaved ? (
-                                      <>
-                                        <Check className="w-4 h-4" />
-                                        Enregistre !
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Save className="w-4 h-4" />
-                                        Enregistrer le proprietaire
-                                      </>
-                                    )}
-                                  </button>
+                                  <div className="border-t border-gray-200 pt-2 mt-2">
+  <label className="block text-xs text-gray-500 mb-1">
+    Nom propriétaire
+  </label>
+
+  <input
+    type="text"
+    value={newOwnerForm.contact_name}
+    onChange={(e) =>
+      setNewOwnerForm({ ...newOwnerForm, contact_name: e.target.value })
+    }
+    placeholder="Ex: Jean Dupont"
+    className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+  />
+</div>
+
                                 </div>
                               ) : (
                                 <p className="text-gray-500">
@@ -861,32 +889,18 @@ export function InformationsStep({
                                     />
                                   </div>
                                   <div>
-                                    <label className="block text-xs text-gray-500 mb-1">Nom propriétaire</label>
-                                    <input
-                                      type="text"
-                                      value={newOccupantForm.contact_name}
-                                      onChange={(e) => setNewOccupantForm({ ...newOccupantForm, contact_name: e.target.value })}
-                                      placeholder="Ex: Jean Dupont"
-                                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    />
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={handleSaveNewOccupant}
-                                    className="w-full mt-2 px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                                  >
-                                    {occupantSaved ? (
-                                      <>
-                                        <Check className="w-4 h-4" />
-                                        Enregistre !
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Save className="w-4 h-4" />
-                                        Enregistrer la societe
-                                      </>
-                                    )}
-                                  </button>
+  <label className="block text-xs text-gray-500 mb-1">Nom propriétaire</label>
+  <input
+    type="text"
+    value={newOccupantForm.contact_name}
+    onChange={(e) =>
+      setNewOccupantForm({ ...newOccupantForm, contact_name: e.target.value })
+    }
+    placeholder="Ex: Jean Dupont"
+    className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+  />
+</div>
+
                                 </div>
                               ) : (
                                 <p className="text-gray-500">
@@ -958,22 +972,46 @@ export function InformationsStep({
                 </div>
 
                 {/* Secteur */}
-                <div>
+                <div ref={zoneInputRef} className="relative">
                   <label className="block text-sm text-gray-700 mb-2">
                     Secteur géographique <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.geographicSector}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       onFormDataChange({
                         ...formData,
                         geographicSector: e.target.value,
-                      })
-                    }
-                    placeholder="Ex: Centre-ville, Zone industrielle"
+                      });
+                    }}
+                    onFocus={() => {
+                      if (zoneSuggestions.length > 0) setShowZoneSuggestions(true);
+                    }}
+                    placeholder="Tapez pour rechercher..."
+                    autoComplete="off"
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
+                  {showZoneSuggestions && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {zoneSuggestions.map((zone) => (
+                        <button
+                          key={zone.id}
+                          type="button"
+                          onClick={() => {
+                            onFormDataChange({
+                              ...formData,
+                              geographicSector: zone.name,
+                            });
+                            setShowZoneSuggestions(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                        >
+                          {zone.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* État du bien */}
