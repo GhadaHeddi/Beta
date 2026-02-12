@@ -94,9 +94,10 @@ export function OffersPanel({ onViewMarketTrends, onProjectClick }: { onViewMark
   return (
     <div className="bg-gray-50 border-l border-gray-200 flex flex-col h-full">
       {/* ====== HAUT : CARTE INTERACTIVE ====== */}
-      <div className="relative h-1/4 min-h-[180px] border-b border-gray-200 overflow-hidden">
+      <div className="relative h-[30vh] min-h-[180px] border-b border-gray-200 overflow-hidden">
         <ProjectsMap onProjectClick={onProjectClick} />
       </div>
+
 
       {/* ====== INDICATEURS DE MARCHÉ ====== */}
       <MarketIndicators onCityClick={onViewMarketTrends} />
