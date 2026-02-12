@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getRecentProjectsAuth } from '@/services/projectService';
 import type { Project } from '@/types/project';
 
-export function useRecentProjects() {
+export function useRecentProjects(agencyId?: number | null) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -11,14 +11,14 @@ export function useRecentProjects() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getRecentProjectsAuth();
+      const data = await getRecentProjectsAuth(agencyId);
       setProjects(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [agencyId]);
 
   useEffect(() => {
     fetchProjects();

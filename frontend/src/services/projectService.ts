@@ -23,14 +23,21 @@ export interface ProjectCreateData {
 /**
  * Version avec authentification (a utiliser en production)
  */
-export async function getRecentProjectsAuth(): Promise<Project[]> {
+export async function getRecentProjectsAuth(agencyId?: number | null): Promise<Project[]> {
   const token = localStorage.getItem('access_token');
 
   if (!token) {
     throw new Error('Non authentifie');
   }
 
-  const response = await fetch(`${API_BASE}/api/projects/`, {
+  const params = new URLSearchParams();
+  if (agencyId != null) {
+    params.append('agency_id', String(agencyId));
+  }
+  const queryString = params.toString();
+  const url = `${API_BASE}/api/projects/${queryString ? `?${queryString}` : ''}`;
+
+  const response = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'

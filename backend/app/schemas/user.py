@@ -22,6 +22,7 @@ class UserBase(BaseModel):
 class ConsultantCreate(UserBase):
     """Schéma pour créer un consultant (par l'admin)"""
     password: str
+    agency_id: Optional[int] = None
 
 
 class UserUpdate(BaseModel):
@@ -40,6 +41,8 @@ class UserResponse(UserBase):
     role: UserRole
     avatar_url: Optional[str] = None
     admin_id: Optional[int] = None
+    agency_id: Optional[int] = None
+    agency_name: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

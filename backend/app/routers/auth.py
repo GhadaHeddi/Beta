@@ -10,6 +10,7 @@ from app.services.auth import verify_password, create_access_token, hash_passwor
 from app.services.user import get_user_by_email, update_user
 from app.utils.security import get_current_user
 from app.models import User
+from app.services.agency import get_primary_agency_for_user
 
 router = APIRouter(prefix="/auth", tags=["Authentification"])
 
@@ -50,12 +51,18 @@ async def login(
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """
-    Retourne le profil de l'utilisateur connecté.
+    Retourne le profil de l'utilisateur connecté, enrichi avec l'agence principale.
     """
-    return current_user
+    primary_agency = get_primary_agency_for_user(db, current_user.id)
+    response = UserResponse.model_validate(current_user)
+    if primary_agency:
+        response.agency_id = primary_agency.id
+        response.agency_name = primary_agency.name
+    return response
 
 
 @router.patch("/me", response_model=UserResponse)

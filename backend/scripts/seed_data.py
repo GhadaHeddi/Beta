@@ -14,6 +14,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import User, UserRole, Project, ProjectStatus, PropertyType, PropertyInfo
+from app.models.agency import Agency, UserAgency
 
 # Configuration du hachage de mot de passe
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -84,6 +85,94 @@ def create_consultants(db: Session, admin: User) -> list[User]:
         db.refresh(c)
 
     return consultants
+
+
+def create_agencies(db: Session, admin: User, consultants: list[User]) -> list[Agency]:
+    """Cree 2 agences et associe les utilisateurs."""
+    agencies_data = [
+        {
+            "name": "Arthur Loyd Valence",
+            "address": "19 Avenue des Langories",
+            "city": "Valence",
+            "postal_code": "26000",
+            "phone": "+33 4 75 XX XX XX",
+            "email": "valence@arthurloyd.fr",
+        },
+        {
+            "name": "Arthur Loyd Avignon",
+            "address": "15 Rue de la Republique",
+            "city": "Avignon",
+            "postal_code": "84000",
+            "phone": "+33 4 90 XX XX XX",
+            "email": "avignon@arthurloyd.fr",
+        },
+    ]
+
+    agencies = []
+    for data in agencies_data:
+        existing = db.query(Agency).filter(Agency.name == data["name"]).first()
+        if existing:
+            print(f"   Agence existante: {data['name']}")
+            agencies.append(existing)
+            continue
+
+        agency = Agency(**data)
+        db.add(agency)
+        agencies.append(agency)
+        print(f"   Agence creee: {data['name']}")
+
+    db.commit()
+    for a in agencies:
+        db.refresh(a)
+
+    # Associer l'admin aux 2 agences
+    for agency in agencies:
+        existing = db.query(UserAgency).filter(
+            UserAgency.user_id == admin.id, UserAgency.agency_id == agency.id
+        ).first()
+        if not existing:
+            ua = UserAgency(user_id=admin.id, agency_id=agency.id, is_primary=False)
+            db.add(ua)
+            print(f"   Admin associe a: {agency.name}")
+
+    # Associer consultants 0-1 (Jean, Marie) a Valence, 2-3 (Pierre, Sophie) a Avignon
+    valence = agencies[0]
+    avignon = agencies[1]
+    consultant_agency_map = {0: valence, 1: valence, 2: avignon, 3: avignon}
+
+    for idx, consultant in enumerate(consultants):
+        agency = consultant_agency_map.get(idx)
+        if not agency:
+            continue
+        existing = db.query(UserAgency).filter(
+            UserAgency.user_id == consultant.id, UserAgency.agency_id == agency.id
+        ).first()
+        if not existing:
+            ua = UserAgency(user_id=consultant.id, agency_id=agency.id, is_primary=True)
+            db.add(ua)
+            print(f"   {consultant.first_name} {consultant.last_name} -> {agency.name}")
+
+    db.commit()
+    return agencies
+
+
+def assign_agency_to_projects(db: Session, agencies: list[Agency]):
+    """Assigne agency_id aux projets existants selon leur geographie."""
+    valence = agencies[0]  # Arthur Loyd Valence
+    avignon = agencies[1]  # Arthur Loyd Avignon
+
+    projects = db.query(Project).filter(Project.agency_id.is_(None)).all()
+    for project in projects:
+        # Determiner l'agence par l'adresse
+        address_lower = project.address.lower()
+        if any(kw in address_lower for kw in ["valence", "portes-les-valence", "alixan", "26000", "26300", "26800"]):
+            project.agency_id = valence.id
+        elif any(kw in address_lower for kw in ["avignon", "le pontet", "montfavet", "villeneuve", "84000", "84130", "84140", "30400"]):
+            project.agency_id = avignon.id
+
+    db.commit()
+    assigned = db.query(Project).filter(Project.agency_id.isnot(None)).count()
+    print(f"   {assigned} projets assignes a une agence")
 
 
 def create_projects(db: Session, consultants: list[User]) -> list[Project]:
@@ -400,10 +489,19 @@ def main():
         consultants = create_consultants(db, admin)
         print(f"   {len(consultants)} consultants disponibles")
 
-        # 3. Créer les projets avec coordonnées
-        print("\n3. Création des projets (Valence + Avignon)...")
+        # 3. Creer les agences et associer les utilisateurs
+        print("\n3. Creation des agences...")
+        agencies = create_agencies(db, admin, consultants)
+        print(f"   {len(agencies)} agences disponibles")
+
+        # 4. Créer les projets avec coordonnées
+        print("\n4. Création des projets (Valence + Avignon)...")
         projects = create_projects(db, consultants)
         print(f"   {len(projects)} projets disponibles")
+
+        # 5. Assigner les agences aux projets
+        print("\n5. Assignation des agences aux projets...")
+        assign_agency_to_projects(db, agencies)
 
         # Résumé
         print("\n" + "=" * 50)

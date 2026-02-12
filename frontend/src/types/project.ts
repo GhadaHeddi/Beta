@@ -1,5 +1,31 @@
 // Types alignés avec le backend FastAPI
 
+// Interfaces Agence
+export interface AgencyBrief {
+  id: number;
+  name: string;
+  city: string | null;
+}
+
+export interface Agency {
+  id: number;
+  name: string;
+  address: string | null;
+  city: string | null;
+  postal_code: string | null;
+  phone: string | null;
+  email: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgencyWithStats extends Agency {
+  consultants_count: number;
+  projects_count: number;
+  projects_in_progress: number;
+  projects_completed: number;
+}
+
 // Enums alignés avec le backend
 export type ProjectStatus = 'draft' | 'in_progress' | 'completed' | 'archived';
 export type PropertyType = 'office' | 'warehouse' | 'retail' | 'industrial' | 'land' | 'mixed';
@@ -35,12 +61,14 @@ export interface Project {
   property_type: PropertyType;
   status: ProjectStatus;
   user_id: number;
+  agency_id: number | null;
   current_step: number;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
   user: UserBrief;
   property_info: PropertyInfoBrief | null;
+  agency: AgencyBrief | null;
 }
 
 // === Types pour le filtrage et la recherche ===
@@ -52,6 +80,7 @@ export interface ProjectFilters {
   consultantId: number | null;
   constructionYearMin: number | null;
   constructionYearMax: number | null;
+  agencyId: number | null;
 }
 
 export interface ProjectSort {
@@ -88,6 +117,7 @@ export const defaultFilters: ProjectFilters = {
   consultantId: null,
   constructionYearMin: null,
   constructionYearMax: null,
+  agencyId: null,
 };
 
 export const defaultSort: ProjectSort = {

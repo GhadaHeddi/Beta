@@ -36,6 +36,18 @@ class User(Base):
     projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
     admin = relationship("User", remote_side=[id], backref="consultants", foreign_keys=[admin_id])
     shared_projects = relationship("ProjectShare", back_populates="user", cascade="all, delete-orphan")
+    agency_associations = relationship("UserAgency", back_populates="user", cascade="all, delete-orphan")
+
+    @property
+    def primary_agency_id(self):
+        """Retourne l'ID de l'agence principale de l'utilisateur."""
+        for assoc in self.agency_associations:
+            if assoc.is_primary:
+                return assoc.agency_id
+        # Fallback: premiere agence si aucune n'est marquee primary
+        if self.agency_associations:
+            return self.agency_associations[0].agency_id
+        return None
 
     @property
     def is_admin(self) -> bool:
