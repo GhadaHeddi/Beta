@@ -173,7 +173,7 @@ async def get_dashboard(
     else:
         recent_query = recent_query.filter(Project.user_id.in_(all_user_ids))
 
-    recent_projects = recent_query.order_by(Project.created_at.desc()).limit(5).all()
+    recent_projects = recent_query.order_by(Project.created_at.desc()).all()
 
     recent_projects_data = [
         {
