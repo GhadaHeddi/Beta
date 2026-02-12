@@ -299,7 +299,12 @@ export function EvaluationProcess({
         );
 
       case "simulation":
-        return <SimulationStep />;
+        return (
+          <SimulationStep
+            projectId={projectId}
+            onStepComplete={() => setStepsCompletion(prev => ({ ...prev, simulation: true }))}
+          />
+        );
 
       case "finalisation":
         return <FinalisationStep />;
