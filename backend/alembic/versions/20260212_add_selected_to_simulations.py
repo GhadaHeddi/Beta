@@ -1,7 +1,7 @@
 """add selected column to simulations
 
 Revision ID: add_sim_selected_001
-Revises: f8907e355d06
+Revises: add_contact_name
 Create Date: 2026-02-12 14:00:00.000000
 
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_sim_selected_001'
-down_revision = 'f8907e355d06'
+down_revision = 'add_contact_name'
 branch_labels = None
 depends_on = None
 

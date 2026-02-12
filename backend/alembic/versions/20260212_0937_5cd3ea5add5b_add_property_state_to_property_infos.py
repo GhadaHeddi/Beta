@@ -1,6 +1,6 @@
 """add property_state to property_infos
 
-Revision ID: 5cd3ea5add5b
+Revision ID: add_property_state
 Revises: add_agencies_001
 Create Date: 2026-02-12 09:37:44.784448
 
@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = '5cd3ea5add5b'
+revision = 'add_property_state'
 down_revision = 'add_agencies_001'
 branch_labels = None
 depends_on = None
