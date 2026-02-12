@@ -10,6 +10,7 @@ class Owner(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False, index=True)
+    contact_name = Column(String, nullable=True)  # Nom du propriétaire physique
     address = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     email = Column(String, nullable=True)

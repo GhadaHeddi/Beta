@@ -46,6 +46,9 @@ interface FormData {
   year: string;
   materials: string;
   geographicSector: string;
+  propertyState: string;
+  totalSurface: string;
+  numberOfFloors: string;
 }
 
 interface SwotAnalysis {
@@ -89,6 +92,9 @@ export function EvaluationProcess({
     year: "",
     materials: "",
     geographicSector: "",
+    propertyState: "",
+    totalSurface: "",
+    numberOfFloors: "",
   });
 
   const [informationsNotes, setInformationsNotes] = useState("");
@@ -122,6 +128,9 @@ export function EvaluationProcess({
             year: propertyInfo.construction_year ? String(propertyInfo.construction_year) : "",
             materials: propertyInfo.materials || "",
             geographicSector: propertyInfo.geographic_sector || "",
+            propertyState: propertyInfo.property_state || "",
+            totalSurface: propertyInfo.total_surface ? String(propertyInfo.total_surface) : "",
+            numberOfFloors: propertyInfo.number_of_floors ? String(propertyInfo.number_of_floors) : "",
           }));
 
           setInformationsSwot({

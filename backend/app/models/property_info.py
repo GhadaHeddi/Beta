@@ -20,6 +20,7 @@ class PropertyInfo(Base):
     occupant_contact = Column(String, nullable=True)
 
     # Caractéristiques du bien
+    property_state = Column(String, nullable=True)  # ancien, neuf, 2eme_main, recent
     construction_year = Column(Integer, nullable=True)
     materials = Column(String, nullable=True)
     total_surface = Column(Float, nullable=True)  # Surface totale en m²
