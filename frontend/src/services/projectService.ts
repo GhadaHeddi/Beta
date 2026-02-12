@@ -528,6 +528,7 @@ export async function removeProjectShare(projectId: number, userId: number): Pro
 
 import type {
   ComparableSearchResponse,
+  ComparablePool,
   ComparisonFilters,
   SelectedComparable
 } from '@/types/comparable';
@@ -556,6 +557,9 @@ export async function searchComparables(
   }
   params.append('distance_km', filters.distanceKm.toString());
   params.append('source', filters.source);
+  if (filters.status && filters.status !== 'all') {
+    params.append('comparable_status', filters.status);
+  }
 
   // Mode DEV: endpoint sans authentification
   const response = await fetch(
@@ -748,6 +752,33 @@ export async function deselectComparable(
 }
 
 /**
+ * Met a jour les champs d'un comparable (surface, prix, annee)
+ */
+export async function updateComparableFields(
+  projectId: number,
+  comparableId: number,
+  fields: { surface?: number; price?: number; price_per_m2?: number; construction_year?: number }
+): Promise<SelectedComparable> {
+  const response = await fetch(
+    `${API_BASE}/api/projects/${projectId}/comparables/dev/select/${comparableId}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(fields)
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Erreur serveur (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
  * Met a jour l'ajustement d'un comparable
  */
 export async function updateComparableAdjustment(
@@ -936,6 +967,35 @@ export async function deleteProjectFile(projectId: number, fileId: number): Prom
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.detail || `Erreur suppression (${response.status})`);
   }
+}
+
+// === Ajout rapide de comparable ===
+
+export interface QuickAddData {
+  project_id: number;
+  address: string;
+  surface: number;
+  price: number;
+  construction_year?: number;
+}
+
+/**
+ * Ajout rapide d'un bien comparable au pool
+ * Geocode l'adresse via Nominatim cote backend
+ */
+export async function quickAddComparable(data: QuickAddData): Promise<ComparablePool> {
+  const response = await fetch(`${API_BASE}/api/comparable-pool/dev/quick-add`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Erreur lors de l\'ajout rapide');
+  }
+
+  return response.json();
 }
 
 // === Fonctions pour les propriétaires ===

@@ -60,6 +60,13 @@ export function ComparisonFilters({ filters, onFiltersChange, onReset }: Props) 
     });
   };
 
+  const handleStatusChange = (value: string) => {
+    onFiltersChange({
+      ...filters,
+      status: value as FiltersType['status']
+    });
+  };
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
       <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Filtres</h4>
@@ -140,6 +147,23 @@ export function ComparisonFilters({ filters, onFiltersChange, onReset }: Props) 
             <SelectItem value="all">Toutes</SelectItem>
             <SelectItem value="arthur_loyd">Arthur Loyd</SelectItem>
             <SelectItem value="concurrence">Concurrence</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Statut */}
+      <div>
+        <label className="text-sm text-gray-700 font-medium block mb-1">
+          Statut
+        </label>
+        <Select value={filters.status} onValueChange={handleStatusChange}>
+          <SelectTrigger className="w-full h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous</SelectItem>
+            <SelectItem value="transaction">Transaction</SelectItem>
+            <SelectItem value="disponible">Disponible</SelectItem>
           </SelectContent>
         </Select>
       </div>

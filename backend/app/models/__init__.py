@@ -9,7 +9,7 @@ from app.models.document import Document, DocumentType
 from app.models.comparable import Comparable
 from app.models.valuation import Valuation, ValuationMethod
 from app.models.dvf_record import DVFRecord
-from app.models.comparable_pool import ComparablePool, ComparableSource, TransactionType
+from app.models.comparable_pool import ComparablePool, ComparableSource, TransactionType, ComparableStatus
 from app.models.surface import Surface, SurfaceType
 from app.models.analysis_result import AnalysisResult
 from app.models.simulation import Simulation, SimulationType
@@ -35,6 +35,7 @@ __all__ = [
     "ComparablePool",
     "ComparableSource",
     "TransactionType",
+    "ComparableStatus",
     "Surface",
     "SurfaceType",
     "AnalysisResult",
