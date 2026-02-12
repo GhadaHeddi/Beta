@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { getRecentProjectsAuth } from '@/services/projectService';
 import type { Project } from '@/types/project';
 
-export function useRecentProjects(agencyId?: number | null) {
+export function useRecentProjects(
+  agencyId?: number | null,
+  limit: number = 5 
+) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -10,15 +13,21 @@ export function useRecentProjects(agencyId?: number | null) {
   const fetchProjects = useCallback(async () => {
     setLoading(true);
     setError(null);
+
     try {
       const data = await getRecentProjectsAuth(agencyId);
-      setProjects(data);
+
+      // ✅ On limite le nombre de projets
+      const limitedProjects = limit ? data.slice(0, limit) : data;
+      console.log('Projets récupérés :', limitedProjects);
+
+      setProjects(limitedProjects);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
       setLoading(false);
     }
-  }, [agencyId]);
+  }, [agencyId, limit]);
 
   useEffect(() => {
     fetchProjects();
@@ -26,3 +35,4 @@ export function useRecentProjects(agencyId?: number | null) {
 
   return { projects, loading, error, refetch: fetchProjects };
 }
+
