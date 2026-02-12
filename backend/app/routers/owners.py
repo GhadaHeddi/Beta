@@ -47,6 +47,8 @@ def create_owner(
     )
 
     if existing:
+        if data.contact_name is not None:
+            existing.contact_name = data.contact_name
         if data.address is not None:
             existing.address = data.address
         if data.phone is not None:
@@ -60,6 +62,7 @@ def create_owner(
 
     owner = Owner(
         name=data.name.strip(),
+        contact_name=data.contact_name,
         address=data.address,
         phone=data.phone,
         email=data.email,

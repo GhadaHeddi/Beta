@@ -7,6 +7,7 @@ from datetime import datetime
 from app.models.project import ProjectStatus, PropertyType
 from app.schemas.user import UserBrief
 from app.schemas.property_info import PropertyInfoBrief
+from app.schemas.agency import AgencyBrief
 
 
 # === Schémas de base ===
@@ -40,6 +41,7 @@ class ProjectResponse(ProjectBase):
     """Schéma de réponse projet"""
     id: int
     user_id: int
+    agency_id: Optional[int] = None
     long_address: Optional[str] = None
     status: ProjectStatus
     current_step: int
@@ -63,6 +65,7 @@ class ProjectWithDetails(ProjectResponse):
     """Projet avec propriétaire et infos du bien"""
     user: UserBrief
     property_info: Optional[PropertyInfoBrief] = None
+    agency: Optional[AgencyBrief] = None
 
     class Config:
         from_attributes = True

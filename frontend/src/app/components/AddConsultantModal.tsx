@@ -1,10 +1,12 @@
-import { X, Eye, EyeOff, User, Mail, Lock, CheckCircle2, AlertCircle } from "lucide-react";
-import { useState } from "react";
+import { X, Eye, EyeOff, User, Mail, Lock, CheckCircle2, AlertCircle, Building2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { getAllAgencies } from "@/services/agencyService";
+import type { Agency } from "@/types/project";
 
 interface AddConsultantModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddConsultant: (name: string, email: string, password: string) => void;
+  onAddConsultant: (name: string, email: string, password: string, agencyId?: number) => void;
 }
 
 export function AddConsultantModal({
@@ -18,12 +20,22 @@ export function AddConsultantModal({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [selectedAgencyId, setSelectedAgencyId] = useState<number | undefined>(undefined);
+  const [agencies, setAgencies] = useState<Agency[]>([]);
   const [errors, setErrors] = useState<{
     name?: string;
     email?: string;
     password?: string;
     confirmPassword?: string;
   }>({});
+
+  useEffect(() => {
+    if (isOpen) {
+      getAllAgencies()
+        .then(setAgencies)
+        .catch(() => setAgencies([]));
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -89,11 +101,12 @@ export function AddConsultantModal({
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      onAddConsultant(name, email, password);
+      onAddConsultant(name, email, password, selectedAgencyId);
       setName("");
       setEmail("");
       setPassword("");
       setConfirmPassword("");
+      setSelectedAgencyId(undefined);
       setErrors({});
     }
   };
@@ -184,6 +197,33 @@ export function AddConsultantModal({
               </div>
             )}
           </div>
+
+          {/* Agence de rattachement */}
+          {agencies.length > 0 && (
+            <div>
+              <label className="block text-sm text-gray-700 mb-2 font-medium">
+                Agence de rattachement
+              </label>
+              <div className="relative">
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <select
+                  value={selectedAgencyId ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedAgencyId(val === "" ? undefined : Number(val));
+                  }}
+                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                >
+                  <option value="">-- Aucune agence --</option>
+                  {agencies.map((agency) => (
+                    <option key={agency.id} value={agency.id}>
+                      {agency.name}{agency.city ? ` - ${agency.city}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
 
           {/* Mot de passe */}
           <div>

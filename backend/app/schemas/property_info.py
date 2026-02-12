@@ -27,6 +27,7 @@ class PropertyInfoUpdate(BaseModel):
     occupant_contact: Optional[str] = None
 
     # Caractéristiques du bien
+    property_state: Optional[str] = None
     construction_year: Optional[int] = None
     materials: Optional[str] = None
     total_surface: Optional[float] = None
@@ -70,6 +71,7 @@ class PropertyInfoResponse(BaseModel):
     occupant_contact: Optional[str] = None
 
     # Caractéristiques du bien
+    property_state: Optional[str] = None
     construction_year: Optional[int] = None
     materials: Optional[str] = None
     total_surface: Optional[float] = None

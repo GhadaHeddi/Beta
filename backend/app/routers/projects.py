@@ -30,6 +30,7 @@ from app.schemas.property_info import PropertyInfoUpdate, PropertyInfoResponse
 from app.utils.security import get_current_user, get_user_admin_id
 from app.models import User, Project, ProjectShare, UserRole, PropertyInfo, Document, DocumentType
 from app.models.project_share import SharePermission
+from app.services.agency import get_primary_agency_for_user
 
 UPLOAD_DIR = Path("/app/uploaded_files")
 
@@ -628,13 +629,14 @@ def can_share_project(db: Session, user: User, project: Project) -> bool:
 
 @router.get("/", response_model=List[ProjectWithDetails])
 async def list_projects(
+    agency_id: Optional[int] = Query(None, description="Filtrer par agence (admin uniquement)"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Liste tous les projets accessibles par l'utilisateur.
 
-    - Admin : tous les projets de son équipe
+    - Admin : tous les projets de son équipe, filtrable par agence
     - Consultant : ses propres projets + projets partagés avec lui
 
     Exclut les projets dans la corbeille.
@@ -643,26 +645,31 @@ async def list_projects(
     if current_user.role == UserRole.ADMIN:
         # Admin : tous les projets de son équipe
         team_ids = get_team_user_ids(db, current_user)
-        projects = (
+        query = (
             db.query(Project)
             .options(
                 joinedload(Project.user),
-                joinedload(Project.property_info)
+                joinedload(Project.property_info),
+                joinedload(Project.agency),
             )
             .filter(
                 Project.deleted_at.is_(None),
                 Project.user_id.in_(team_ids)
             )
-            .order_by(Project.updated_at.desc())
-            .all()
         )
+        # Filtre par agence si specifie
+        if agency_id is not None:
+            query = query.filter(Project.agency_id == agency_id)
+
+        projects = query.order_by(Project.updated_at.desc()).all()
     else:
         # Consultant : ses propres projets + projets partagés avec lui
         projects = (
             db.query(Project)
             .options(
                 joinedload(Project.user),
-                joinedload(Project.property_info)
+                joinedload(Project.property_info),
+                joinedload(Project.agency),
             )
             .filter(
                 Project.deleted_at.is_(None),
@@ -695,8 +702,12 @@ async def create_project(
     - **address**: Adresse du bien
     - **property_type**: Type de bien (OFFICE, WAREHOUSE, RETAIL, INDUSTRIAL, LAND, MIXED)
     """
+    # Auto-assigner l'agence principale du createur
+    primary_agency = get_primary_agency_for_user(db, current_user.id)
+
     project = Project(
         user_id=current_user.id,
+        agency_id=primary_agency.id if primary_agency else None,
         title=project_data.title,
         address=project_data.address,
         property_type=project_data.property_type,

@@ -23,14 +23,21 @@ export interface ProjectCreateData {
 /**
  * Version avec authentification (a utiliser en production)
  */
-export async function getRecentProjectsAuth(): Promise<Project[]> {
+export async function getRecentProjectsAuth(agencyId?: number | null): Promise<Project[]> {
   const token = localStorage.getItem('access_token');
 
   if (!token) {
     throw new Error('Non authentifie');
   }
 
-  const response = await fetch(`${API_BASE}/api/projects/`, {
+  const params = new URLSearchParams();
+  if (agencyId != null) {
+    params.append('agency_id', String(agencyId));
+  }
+  const queryString = params.toString();
+  const url = `${API_BASE}/api/projects/${queryString ? `?${queryString}` : ''}`;
+
+  const response = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -212,10 +219,12 @@ export interface PropertyInfoData {
   owner_contact?: string;
   occupant_name?: string;
   occupant_contact?: string;
+  property_state?: string;
   construction_year?: number;
   materials?: string;
   total_surface?: number;
   terrain_surface?: number;
+  number_of_floors?: number;
   geographic_sector?: string;
   latitude?: number;
   longitude?: number;
@@ -994,6 +1003,7 @@ export async function quickAddComparable(data: QuickAddData): Promise<Comparable
 export interface OwnerRecord {
   id: number;
   name: string;
+  contact_name: string | null;
   address: string | null;
   phone: string | null;
   email: string | null;
@@ -1002,6 +1012,7 @@ export interface OwnerRecord {
 
 export interface OwnerCreateData {
   name: string;
+  contact_name?: string;
   address?: string;
   phone?: string;
   email?: string;

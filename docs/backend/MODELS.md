@@ -1,6 +1,6 @@
 # Backend - Modeles SQLAlchemy et Enums
 
-13 modeles SQLAlchemy definis dans `backend/app/models/`. ORM SQLAlchemy 2.0 avec GeoAlchemy2 pour les colonnes PostGIS.
+15 modeles SQLAlchemy definis dans `backend/app/models/`. ORM SQLAlchemy 2.0 avec GeoAlchemy2 pour les colonnes PostGIS.
 
 ---
 
@@ -142,8 +142,11 @@ Table : `users`
 - `admin` -> User (N:1 auto-referentiel via admin_id)
 - `consultants` -> User (1:N backref via admin_id)
 - `shared_projects` -> ProjectShare (1:N, cascade delete)
+- `agency_associations` -> UserAgency (1:N, cascade delete) - associations avec des agences
 
-**Propriete** : `is_admin` -> `bool`
+**Proprietes** :
+- `is_admin` -> `bool`
+- `primary_agency_id` -> `Optional[int]` - retourne l'`agency_id` de l'association UserAgency ou `is_primary=True`
 
 ---
 

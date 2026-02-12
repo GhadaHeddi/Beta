@@ -1,0 +1,23 @@
+"""add property_state to property_infos
+
+Revision ID: add_property_state
+Revises: add_agencies_001
+Create Date: 2026-02-12 09:37:44.784448
+
+"""
+from alembic import op
+import sqlalchemy as sa
+
+# revision identifiers, used by Alembic.
+revision = 'add_property_state'
+down_revision = 'add_agencies_001'
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    op.add_column('property_infos', sa.Column('property_state', sa.String(), nullable=True))
+
+
+def downgrade() -> None:
+    op.drop_column('property_infos', 'property_state')

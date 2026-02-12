@@ -39,6 +39,9 @@ interface FormData {
   year: string;
   materials: string;
   geographicSector: string;
+  propertyState: string;
+  totalSurface: string;
+  numberOfFloors: string;
 }
 
 interface SwotAnalysis {
@@ -84,16 +87,15 @@ export function InformationsStep({
   initialCoordinates,
 }: InformationsStepProps) {
   const [notesCopied, setNotesCopied] = useState(false);
-  const [swotSaved, setSwotSaved] = useState(false);
   const [showOwnerInfo, setShowOwnerInfo] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saved" | "error">("idle");
 
   // Propriétaire trouvé en base (via API)
   const [foundOwner, setFoundOwner] = useState<OwnerRecord | null>(null);
 
   // Formulaire nouveau proprietaire
   const [newOwnerForm, setNewOwnerForm] = useState({
+    contact_name: "",
     address: "",
     phone: "",
     email: "",
@@ -105,9 +107,22 @@ export function InformationsStep({
     initialCoordinates || null
   );
 
+  // Société occupante - popover SCI
+  const [showOccupantInfo, setShowOccupantInfo] = useState(false);
+  const [foundOccupant, setFoundOccupant] = useState<OwnerRecord | null>(null);
+  const [newOccupantForm, setNewOccupantForm] = useState({
+    contact_name: "",
+    address: "",
+    phone: "",
+    email: "",
+  });
+  const [occupantSaved, setOccupantSaved] = useState(false);
+
   // Ref pour le popover (click-outside)
   const ownerInfoRef = useRef<HTMLDivElement>(null);
   const infoIconRef = useRef<HTMLDivElement>(null);
+  const occupantInfoRef = useRef<HTMLDivElement>(null);
+  const occupantInfoIconRef = useRef<HTMLDivElement>(null);
 
   const handleSaveNewOwner = async () => {
     if (!formData.ownerName.trim()) return;
@@ -118,6 +133,7 @@ export function InformationsStep({
     try {
       const saved = await createOwner({
         name: formData.ownerName.trim(),
+        contact_name: newOwnerForm.contact_name,
         address: newOwnerForm.address,
         phone: newOwnerForm.phone,
         email: newOwnerForm.email,
@@ -128,6 +144,29 @@ export function InformationsStep({
     } catch (error) {
       console.error("Erreur sauvegarde proprietaire:", error);
       alert("Erreur lors de la sauvegarde du proprietaire");
+    }
+  };
+
+  const handleSaveNewOccupant = async () => {
+    if (!formData.occupantName.trim()) return;
+    if (!newOccupantForm.email.trim() && !newOccupantForm.phone.trim()) {
+      alert("Veuillez renseigner au moins un email ou un telephone.");
+      return;
+    }
+    try {
+      const saved = await createOwner({
+        name: formData.occupantName.trim(),
+        contact_name: newOccupantForm.contact_name,
+        address: newOccupantForm.address,
+        phone: newOccupantForm.phone,
+        email: newOccupantForm.email,
+      });
+      setFoundOccupant(saved);
+      setOccupantSaved(true);
+      setTimeout(() => setOccupantSaved(false), 2000);
+    } catch (error) {
+      console.error("Erreur sauvegarde societe occupante:", error);
+      alert("Erreur lors de la sauvegarde de la societe occupante");
     }
   };
 
@@ -142,12 +181,30 @@ export function InformationsStep({
       const owner = await searchOwner(name);
       setFoundOwner(owner);
       if (owner) {
-        setNewOwnerForm({ address: "", phone: "", email: "" });
+        setNewOwnerForm({ contact_name: "", address: "", phone: "", email: "" });
         setOwnerSaved(false);
       }
     }, 400);
     return () => clearTimeout(timer);
   }, [formData.ownerName]);
+
+  // Recherche de la societe occupante en base quand le nom change
+  useEffect(() => {
+    const name = formData.occupantName.trim();
+    if (!name) {
+      setFoundOccupant(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const occupant = await searchOwner(name);
+      setFoundOccupant(occupant);
+      if (occupant) {
+        setNewOccupantForm({ contact_name: "", address: "", phone: "", email: "" });
+        setOccupantSaved(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [formData.occupantName]);
 
   // Fermer le popover quand on clique en dehors
   useEffect(() => {
@@ -163,6 +220,21 @@ export function InformationsStep({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showOwnerInfo]);
+
+  // Fermer le popover occupant quand on clique en dehors
+  useEffect(() => {
+    if (!showOccupantInfo) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        occupantInfoRef.current && !occupantInfoRef.current.contains(e.target as Node) &&
+        occupantInfoIconRef.current && !occupantInfoIconRef.current.contains(e.target as Node)
+      ) {
+        setShowOccupantInfo(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showOccupantInfo]);
 
   // État pour la validation d'adresse
   const [isValidatingAddress, setIsValidatingAddress] = useState(!isAddressValidated && !initialCoordinates && !!formData.address);
@@ -333,70 +405,44 @@ export function InformationsStep({
     }
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.title.trim()) newErrors.title = "Le titre est obligatoire";
-    if (!formData.address.trim()) newErrors.address = "L'adresse est obligatoire";
-    if (!isAddressValidated) newErrors.address = "Veuillez valider l'adresse sur la carte";
-    if (!formData.ownerName.trim())
-      newErrors.ownerName = "Le nom du propriétaire est obligatoire";
-    if (!formData.propertyType)
-      newErrors.propertyType = "Le type de bien est obligatoire";
-
-    if (!formData.year) {
-      newErrors.year = "L'année de construction est obligatoire";
-    } else {
-      const yearNum = parseInt(formData.year);
-      const currentYear = new Date().getFullYear();
-      if (yearNum < 1800 || yearNum > currentYear) {
-        newErrors.year = `L'année doit être entre 1800 et ${currentYear}`;
-      }
-    }
-
-    if (!formData.geographicSector.trim()) {
-      newErrors.geographicSector = "Le secteur géographique est obligatoire";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSave = async () => {
-    if (!validateForm()) {
-      if (!isAddressValidated && formData.address) {
-        // Scroll vers la carte si l'adresse n'est pas validée
-        mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      alert("Veuillez remplir tous les champs obligatoires et valider l'adresse");
+  // Sauvegarde automatique des informations du bien
+  const autoSavePropertyRef = useRef(false);
+  useEffect(() => {
+    // Ignorer le premier rendu
+    if (!autoSavePropertyRef.current) {
+      autoSavePropertyRef.current = true;
       return;
     }
-
-    setIsSaving(true);
-
-    try {
-      const propertyData = {
-        owner_name: formData.ownerName,
-        occupant_name: formData.occupantName,
-        construction_year: formData.year ? parseInt(formData.year) : undefined,
-        materials: formData.materials || undefined,
-        geographic_sector: formData.geographicSector,
-        latitude: confirmedCoords?.lat,
-        longitude: confirmedCoords?.lng,
-      };
-
-      await savePropertyInfo(projectId, propertyData);
-
-      onStepComplete();
-      alert("Informations de l'immeuble enregistrées avec succès !");
-      setErrors({});
-    } catch (error) {
-      console.error("Erreur lors de la sauvegarde:", error);
-      alert(error instanceof Error ? error.message : "Erreur lors de la sauvegarde");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    const timer = setTimeout(async () => {
+      try {
+        const propertyData = {
+          owner_name: formData.ownerName || undefined,
+          occupant_name: formData.occupantName || undefined,
+          construction_year: formData.year ? parseInt(formData.year) : undefined,
+          materials: formData.materials || undefined,
+          geographic_sector: formData.geographicSector || undefined,
+          property_state: formData.propertyState || undefined,
+          total_surface: formData.totalSurface ? parseFloat(formData.totalSurface) : undefined,
+          number_of_floors: formData.numberOfFloors ? parseInt(formData.numberOfFloors) : undefined,
+          latitude: confirmedCoords?.lat,
+          longitude: confirmedCoords?.lng,
+        };
+        await savePropertyInfo(projectId, propertyData);
+        setAutoSaveStatus("saved");
+        setTimeout(() => setAutoSaveStatus("idle"), 2000);
+        // Marquer l'etape comme complete si le formulaire est valide
+        if (formData.title.trim() && formData.address.trim() && isAddressValidated &&
+            formData.ownerName.trim() && formData.propertyType && formData.year && formData.geographicSector.trim()) {
+          onStepComplete();
+        }
+      } catch (error) {
+        console.error("Erreur auto-save informations:", error);
+        setAutoSaveStatus("error");
+        setTimeout(() => setAutoSaveStatus("idle"), 3000);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [formData, confirmedCoords]);
 
   const handleCopyNotes = () => {
     navigator.clipboard.writeText(notes);
@@ -409,27 +455,33 @@ export function InformationsStep({
     alert("Notes envoyées à l'assistant IA !");
   };
 
-  const handleSaveSwot = async () => {
-    setSwotSaved(false);
-
-    try {
-      const swotData = {
-        swot_strengths: swotAnalysis.strengths || undefined,
-        swot_weaknesses: swotAnalysis.weaknesses || undefined,
-        swot_opportunities: swotAnalysis.opportunities || undefined,
-        swot_threats: swotAnalysis.threats || undefined,
-        notes: notes || undefined,
-      };
-
-      await savePropertyInfo(projectId, swotData);
-
-      setSwotSaved(true);
-      setTimeout(() => setSwotSaved(false), 2000);
-    } catch (error) {
-      console.error("Erreur lors de la sauvegarde SWOT:", error);
-      alert(error instanceof Error ? error.message : "Erreur lors de la sauvegarde");
+  // Sauvegarde automatique SWOT + notes
+  const autoSaveSwotRef = useRef(false);
+  useEffect(() => {
+    if (!autoSaveSwotRef.current) {
+      autoSaveSwotRef.current = true;
+      return;
     }
-  };
+    const timer = setTimeout(async () => {
+      try {
+        const swotData = {
+          swot_strengths: swotAnalysis.strengths || undefined,
+          swot_weaknesses: swotAnalysis.weaknesses || undefined,
+          swot_opportunities: swotAnalysis.opportunities || undefined,
+          swot_threats: swotAnalysis.threats || undefined,
+          notes: notes || undefined,
+        };
+        await savePropertyInfo(projectId, swotData);
+        setAutoSaveStatus("saved");
+        setTimeout(() => setAutoSaveStatus("idle"), 2000);
+      } catch (error) {
+        console.error("Erreur auto-save SWOT:", error);
+        setAutoSaveStatus("error");
+        setTimeout(() => setAutoSaveStatus("idle"), 3000);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [swotAnalysis, notes]);
 
   return (
     <div className="flex gap-6">
@@ -504,9 +556,21 @@ export function InformationsStep({
       <div className="flex-1">
         <div ref={formTopRef} className="bg-white rounded-lg border border-gray-200">
           <div className="bg-blue-600 px-6 py-4 rounded-t-lg">
-            <div className="flex items-center gap-3">
-              <Building className="w-6 h-6 text-white" />
-              <h3 className="text-lg text-white">Informations de l'immeuble</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Building className="w-6 h-6 text-white" />
+                <h3 className="text-lg text-white">Informations de l'immeuble</h3>
+              </div>
+              {autoSaveStatus === "saved" && (
+                <span className="text-white/80 text-xs flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Sauvegardé
+                </span>
+              )}
+              {autoSaveStatus === "error" && (
+                <span className="text-red-200 text-xs flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> Erreur de sauvegarde
+                </span>
+              )}
             </div>
           </div>
 
@@ -537,12 +601,6 @@ export function InformationsStep({
               </div>
             )}
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSave();
-              }}
-            >
               <div className="grid grid-cols-2 gap-6 mb-6">
                 {/* Titre */}
                 <div>
@@ -552,19 +610,12 @@ export function InformationsStep({
                   <input
                     type="text"
                     value={formData.title}
-                    required
-                    onChange={(e) => {
-                      onFormDataChange({ ...formData, title: e.target.value });
-                      if (errors.title) setErrors({ ...errors, title: "" });
-                    }}
+                    onChange={(e) =>
+                      onFormDataChange({ ...formData, title: e.target.value })
+                    }
                     placeholder="Ex: Immeuble A"
-                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.title ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  {errors.title && (
-                    <p className="text-red-500 text-xs mt-1">{errors.title}</p>
-                  )}
                 </div>
 
                 {/* Adresse */}
@@ -580,13 +631,11 @@ export function InformationsStep({
                       ref={addressFieldRef}
                       type="text"
                       value={formData.address}
-                      required
                       onChange={(e) => {
                         onFormDataChange({
                           ...formData,
                           address: e.target.value,
                         });
-                        if (errors.address) setErrors({ ...errors, address: "" });
                         // Si l'adresse change après validation, invalider
                         if (isAddressValidated && e.target.value !== addressToValidate) {
                           onAddressValidatedChange(false);
@@ -594,7 +643,6 @@ export function InformationsStep({
                       }}
                       placeholder="Ex: 123 Rue des Immeubles, 75001 Paris"
                       className={`flex-1 px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        errors.address ? "border-red-500 bg-red-50" :
                         !isAddressValidated && formData.address ? "border-amber-500 bg-amber-50" :
                         isAddressValidated ? "border-green-500 bg-green-50" :
                         "border-gray-300"
@@ -610,17 +658,12 @@ export function InformationsStep({
                       </button>
                     )}
                   </div>
-                  {errors.address && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors.address}
-                    </p>
-                  )}
                 </div>
 
                 {/* Nom du propriétaire */}
                 <div className="relative">
                   <label className="block text-sm text-gray-700 mb-2 flex items-center gap-1">
-                    Nom du propriétaire <span className="text-red-500">*</span>
+                    SCI Propriétaire <span className="text-red-500">*</span>
                     <div ref={infoIconRef} className="relative inline-flex">
                       <Info
                         className="w-4 h-4 text-blue-600 cursor-pointer"
@@ -642,9 +685,10 @@ export function InformationsStep({
                                   <p className="text-xs text-gray-500">{foundOwner.projects_count} projet(s) en base</p>
                                 </div>
                               </div>
-                              <p><strong>Adresse :</strong> {foundOwner.address}</p>
-                              <p><strong>Telephone :</strong> {foundOwner.phone}</p>
-                              <p><strong>Email :</strong> {foundOwner.email}</p>
+                              <p><strong>Adresse :</strong> {foundOwner.address || "—"}</p>
+                              <p><strong>Telephone :</strong> {foundOwner.phone || "—"}</p>
+                              <p><strong>Email :</strong> {foundOwner.email || "—"}</p>
+                              <p><strong>Nom propriétaire :</strong> {foundOwner.contact_name || "—"}</p>
                             </div>
                           ) : (
                             <div className="p-4 text-sm text-gray-600">
@@ -653,7 +697,7 @@ export function InformationsStep({
                                   <UserPlus className="w-4 h-4 text-amber-700" />
                                 </div>
                                 <div>
-                                  <p className="font-semibold text-gray-900">Nouveau proprietaire</p>
+                                  <p className="font-semibold text-gray-900">Nouvelle société</p>
                                   <p className="text-xs text-gray-500">Remplissez sa fiche</p>
                                 </div>
                               </div>
@@ -686,6 +730,16 @@ export function InformationsStep({
                                       value={newOwnerForm.email}
                                       onChange={(e) => setNewOwnerForm({ ...newOwnerForm, email: e.target.value })}
                                       placeholder="Ex: contact@exemple.fr"
+                                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Nom propriétaire</label>
+                                    <input
+                                      type="text"
+                                      value={newOwnerForm.contact_name}
+                                      onChange={(e) => setNewOwnerForm({ ...newOwnerForm, contact_name: e.target.value })}
+                                      placeholder="Ex: Jean Dupont"
                                       className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                     />
                                   </div>
@@ -722,33 +776,130 @@ export function InformationsStep({
                   <input
                     type="text"
                     value={formData.ownerName}
-                    required
-                    onChange={(e) => {
+                    onChange={(e) =>
                       onFormDataChange({
                         ...formData,
                         ownerName: e.target.value,
-                      });
-                      if (errors.ownerName)
-                        setErrors({ ...errors, ownerName: "" });
-                    }}
-                    placeholder="Ex: Jean Dupont"
-                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.ownerName ? "border-red-500" : "border-gray-300"
-                    }`}
+                      })
+                    }
+                    placeholder="Ex: SCI Immobiliere XYZ"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-
-                  {errors.ownerName && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors.ownerName}
-                    </p>
-                  )}
                 </div>
 
-                {/* Nom occupant */}
-                <div>
-                  <label className="block text-sm text-gray-700 mb-2">
-                    Nom de l'occupant
+                {/* Société occupante */}
+                <div className="relative">
+                  <label className="block text-sm text-gray-700 mb-2 flex items-center gap-1">
+                    SCI Occupante
+                    <div ref={occupantInfoIconRef} className="relative inline-flex">
+                      <Info
+                        className="w-4 h-4 text-blue-600 cursor-pointer"
+                        onClick={() => setShowOccupantInfo(!showOccupantInfo)}
+                      />
+                      {showOccupantInfo && (
+                        <div ref={occupantInfoRef} className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-80 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
+                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-white"></div>
+                          {foundOccupant ? (
+                            <div className="p-4 space-y-2 text-sm text-gray-700">
+                              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <span className="text-blue-700 font-semibold text-xs">
+                                    {foundOccupant.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-gray-900">{foundOccupant.name}</p>
+                                  <p className="text-xs text-gray-500">{foundOccupant.projects_count} projet(s) en base</p>
+                                </div>
+                              </div>
+                              <p><strong>Adresse :</strong> {foundOccupant.address || "—"}</p>
+                              <p><strong>Telephone :</strong> {foundOccupant.phone || "—"}</p>
+                              <p><strong>Email :</strong> {foundOccupant.email || "—"}</p>
+                              <p><strong>Nom propriétaire :</strong> {foundOccupant.contact_name || "—"}</p>
+                            </div>
+                          ) : (
+                            <div className="p-4 text-sm text-gray-600">
+                              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+                                <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                                  <UserPlus className="w-4 h-4 text-amber-700" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-gray-900">Nouvelle societe</p>
+                                  <p className="text-xs text-gray-500">Remplissez sa fiche</p>
+                                </div>
+                              </div>
+                              {formData.occupantName.trim() ? (
+                                <div className="space-y-2 mt-2">
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Adresse</label>
+                                    <input
+                                      type="text"
+                                      value={newOccupantForm.address}
+                                      onChange={(e) => setNewOccupantForm({ ...newOccupantForm, address: e.target.value })}
+                                      placeholder="Ex: 10 Rue de la Paix, 75002 Paris"
+                                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Telephone</label>
+                                    <input
+                                      type="tel"
+                                      value={newOccupantForm.phone}
+                                      onChange={(e) => setNewOccupantForm({ ...newOccupantForm, phone: e.target.value })}
+                                      placeholder="Ex: +33 6 00 00 00 00"
+                                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Email</label>
+                                    <input
+                                      type="email"
+                                      value={newOccupantForm.email}
+                                      onChange={(e) => setNewOccupantForm({ ...newOccupantForm, email: e.target.value })}
+                                      placeholder="Ex: contact@exemple.fr"
+                                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Nom propriétaire</label>
+                                    <input
+                                      type="text"
+                                      value={newOccupantForm.contact_name}
+                                      onChange={(e) => setNewOccupantForm({ ...newOccupantForm, contact_name: e.target.value })}
+                                      placeholder="Ex: Jean Dupont"
+                                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={handleSaveNewOccupant}
+                                    className="w-full mt-2 px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                                  >
+                                    {occupantSaved ? (
+                                      <>
+                                        <Check className="w-4 h-4" />
+                                        Enregistre !
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Save className="w-4 h-4" />
+                                        Enregistrer la societe
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              ) : (
+                                <p className="text-gray-500">
+                                  Saisissez un nom de societe pour voir ses informations.
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </label>
+
                   <input
                     type="text"
                     value={formData.occupantName}
@@ -770,18 +921,13 @@ export function InformationsStep({
                   </label>
                   <select
                     value={formData.propertyType}
-                    required
-                    onChange={(e) => {
+                    onChange={(e) =>
                       onFormDataChange({
                         ...formData,
                         propertyType: e.target.value,
-                      });
-                      if (errors.propertyType)
-                        setErrors({ ...errors, propertyType: "" });
-                    }}
-                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.propertyType ? "border-red-500" : "border-gray-300"
-                    }`}
+                      })
+                    }
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Sélectionner</option>
                     <option value="office">Bureaux</option>
@@ -791,11 +937,6 @@ export function InformationsStep({
                     <option value="land">Terrain</option>
                     <option value="mixed">Mixte</option>
                   </select>
-                  {errors.propertyType && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors.propertyType}
-                    </p>
-                  )}
                 </div>
 
                 {/* Année */}
@@ -806,21 +947,14 @@ export function InformationsStep({
                   <input
                     type="number"
                     value={formData.year}
-                    required
                     min="1800"
                     max={new Date().getFullYear()}
-                    onChange={(e) => {
-                      onFormDataChange({ ...formData, year: e.target.value });
-                      if (errors.year) setErrors({ ...errors, year: "" });
-                    }}
+                    onChange={(e) =>
+                      onFormDataChange({ ...formData, year: e.target.value })
+                    }
                     placeholder="Ex: 1995"
-                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.year ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  {errors.year && (
-                    <p className="text-red-500 text-xs mt-1">{errors.year}</p>
-                  )}
                 </div>
 
                 {/* Secteur */}
@@ -831,42 +965,84 @@ export function InformationsStep({
                   <input
                     type="text"
                     value={formData.geographicSector}
-                    required
-                    onChange={(e) => {
+                    onChange={(e) =>
                       onFormDataChange({
                         ...formData,
                         geographicSector: e.target.value,
-                      });
-                      if (errors.geographicSector)
-                        setErrors({ ...errors, geographicSector: "" });
-                    }}
+                      })
+                    }
                     placeholder="Ex: Centre-ville, Zone industrielle"
-                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.geographicSector ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  {errors.geographicSector && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors.geographicSector}
-                    </p>
-                  )}
+                </div>
+
+                {/* État du bien */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    État
+                  </label>
+                  <select
+                    value={formData.propertyState}
+                    onChange={(e) =>
+                      onFormDataChange({
+                        ...formData,
+                        propertyState: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Sélectionner</option>
+                    <option value="ancien">Ancien</option>
+                    <option value="neuf">Neuf</option>
+                    <option value="2eme_main">2ème main</option>
+                    <option value="recent">Récent</option>
+                  </select>
+                </div>
+
+                {/* Surface totale */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                    Surface totale (m²)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.totalSurface}
+                    min="0"
+                    step="0.01"
+                    onChange={(e) =>
+                      onFormDataChange({
+                        ...formData,
+                        totalSurface: e.target.value,
+                      })
+                    }
+                    placeholder="Ex: 500"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Nombre de niveaux */}
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">
+                   Nombre de niveaux
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.numberOfFloors}
+                    min="0"
+                    step="1"
+                    onChange={(e) =>
+                      onFormDataChange({
+                        ...formData,
+                        numberOfFloors: e.target.value,
+                      })
+                    }
+                    placeholder="Ex: 3"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={isSaving || !isAddressValidated}
-                className={`w-full px-6 py-3 text-white rounded-lg transition-colors text-base font-medium disabled:cursor-not-allowed ${
-                  isAddressValidated
-                    ? "bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                    : "bg-gray-400 cursor-not-allowed"
-                }`}
-              >
-                {isSaving ? "Enregistrement..." :
-                 !isAddressValidated ? "Veuillez d'abord valider l'adresse" :
-                 "Enregistrer les informations"}
-              </button>
-            </form>
+            </div>
 
             {/* Notes */}
             <div className="mt-6 bg-white rounded-lg border border-gray-200 p-4">
@@ -1011,29 +1187,10 @@ export function InformationsStep({
                   />
                 </div>
               </div>
-
-              <div className="flex justify-center mt-6">
-                <button
-                  onClick={handleSaveSwot}
-                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
-                >
-                  {swotSaved ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      Sauvegardé !
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Sauvegarder l'analyse
-                    </>
-                  )}
-                </button>
-              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    
   );
 }

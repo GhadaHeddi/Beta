@@ -29,6 +29,8 @@ from app.models import (
     DocumentGeneration,
     PropertyBreakdown,
     Owner,
+    Agency,
+    UserAgency,
 )
 
 # this is the Alembic Config object, which provides

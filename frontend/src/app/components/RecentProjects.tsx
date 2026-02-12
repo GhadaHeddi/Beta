@@ -28,6 +28,7 @@ const propertyTypeConfig: Record<PropertyType, { icon: typeof Building2; label: 
   mixed: { icon: Building2, label: "Mixte", emoji: "\u{1F3D7}" },
 };
 
+
 // Mapping des statuts backend vers l'affichage
 const statusConfig: Record<ProjectStatus, { label: string; color: string }> = {
   draft: { label: "Brouillon", color: "bg-gray-100 text-gray-800" },
@@ -58,6 +59,7 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
   const [projectToShare, setProjectToShare] = useState<Project | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [limit, setLimit] = useState<number>(5);
 
   const handleShareClick = (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
@@ -92,7 +94,7 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
     setDeleteError(null);
   };
 
-  const { projects, loading, error, refetch } = useRecentProjects();
+  const { projects, loading, error, refetch } = useRecentProjects(undefined, limit);
 
   // Filtrage local par progression
   const filteredProjects = (projects ?? []).filter((project) => {
@@ -172,10 +174,21 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
             Mes avis de valeur recents
           </h2>
 
-          {/* Compteur de resultats */}
-          <span className="text-sm text-gray-500 whitespace-nowrap">
-            {filteredProjects.length} projet{filteredProjects.length !== 1 ? 's' : ''}
-          </span>
+          {/* Dropdown nombre de projets */}
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-sm text-gray-600 whitespace-nowrap">
+              Afficher :
+            </span>
+            <select
+              value={limit}
+              onChange={(e) => setLimit(Number(e.target.value))}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={5}>5 derniers</option>
+              <option value={10}>10 derniers</option>
+              <option value={20}>20 derniers</option>
+            </select>
+          </div>
         </div>
 
         {/* Filtres de progression */}
@@ -233,7 +246,7 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
               Termines
             </button>
           </div>
-
+            
           {/* Badge de completion totale */}
           <span
             className={`inline-block px-3 py-1.5 rounded-full text-sm whitespace-nowrap ${
@@ -242,8 +255,9 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
           >
             Completion totale : {averageCompletion}%
           </span>
+          
         </div>
-
+        
         {/* Table */}
         <div className="flex-1 bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col">
           {filteredProjects.length === 0 ? (
@@ -285,6 +299,9 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
                     <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
                       Annee <br />
                       de construction
+                    </th>
+                    <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      Agence
                     </th>
                     <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
                       Actions
@@ -348,6 +365,9 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
                         </td>
                         <td className="px-6 text-center py-4 text-gray-700 whitespace-nowrap">
                           {project.property_info?.construction_year ?? "-"}
+                        </td>
+                        <td className="px-6 text-center py-4 text-gray-700 whitespace-nowrap text-sm">
+                          {project.agency?.name || "-"}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-end gap-2">
