@@ -174,13 +174,15 @@ export function Header({ onLogoClick, onDashboardClick, searchQuery = "", onTras
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              {/* Dashboard Button */}
-              <button
-                onClick={handleDashboardClick}
-                className="w-10 h-10 rounded-full hover:bg-gray-100 transition-colors flex items-center justify-center"
-              >
-                <LayoutDashboard className="w-5 h-5 text-gray-700" />
-              </button>
+              {/* Dashboard Button - Admin only */}
+              {currentUser?.role === "admin" && (
+                <button
+                  onClick={handleDashboardClick}
+                  className="w-10 h-10 rounded-full hover:bg-gray-100 transition-colors flex items-center justify-center"
+                >
+                  <LayoutDashboard className="w-5 h-5 text-gray-700" />
+                </button>
+              )}
 
               {/* Inbox Button */}
               <div className="relative">
