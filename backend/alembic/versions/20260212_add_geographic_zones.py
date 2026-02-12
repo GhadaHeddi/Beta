@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_geographic_zones_001'
-down_revision = '535d42926912'
+down_revision = 'add_status_cp_001'
 branch_labels = None
 depends_on = None
 
