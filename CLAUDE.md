@@ -31,7 +31,7 @@ Beta/
 │   ├── backend/
 │   │   ├── ARCHITECTURE.md            # Architecture backend, config, auth, permissions, services
 │   │   ├── API.md                     # Reference complete de tous les endpoints REST
-│   │   ├── MODELS.md                  # 13 modeles SQLAlchemy, enums, schemas Pydantic, migrations
+│   │   ├── MODELS.md                  # 15 modeles SQLAlchemy, enums, schemas Pydantic, migrations
 │   │   └── bdd/
 │   │       ├── schema-bdd.md          # Schema BDD detaille (toutes tables, relations, PostGIS)
 │   │       └── schema-bdd.mmd         # Diagramme Mermaid du schema
@@ -43,7 +43,7 @@ Beta/
 │   │   ├── main.py                    # Point d'entree FastAPI (prefix /api, CORS)
 │   │   ├── config.py                  # Settings via .env (Pydantic BaseSettings)
 │   │   ├── database.py                # Engine SQLAlchemy + get_db() dependency
-│   │   ├── models/                    # 13 modeles SQLAlchemy (voir docs/backend/MODELS.md)
+│   │   ├── models/                    # 15 modeles SQLAlchemy (voir docs/backend/MODELS.md)
 │   │   ├── schemas/                   # Schemas Pydantic : user.py, project.py, property_info.py
 │   │   ├── routers/                   # auth.py, admin.py, projects.py, comparables.py
 │   │   ├── services/                  # auth.py, user.py, comparable_service.py
@@ -65,7 +65,7 @@ Beta/
     └── package.json
 ```
 
-## Base de donnees - 13 tables
+## Base de donnees - 15 tables
 
 ```
 users ──> projects ──┬── property_infos (1:1)
@@ -77,6 +77,9 @@ users ──> projects ──┬── property_infos (1:1)
                      ├── simulations (1:N)
                      ├── document_generations (1:N)
                      └── project_shares (N:N users)
+
+agencies ──┬── user_agencies (N:N users <-> agencies)
+           └── projects (1:N, via agency_id)
 
 Tables de reference (independantes) :
 ├── comparable_pool (pool central + PostGIS GEOMETRY)
@@ -120,6 +123,12 @@ Tables de reference (independantes) :
 - `GET /projects/{id}/available-users?search=` - Utilisateurs disponibles
 - `GET/POST /projects/{id}/shares` - Liste / Creation partage
 - `PUT/DELETE /projects/{id}/shares/{user_id}` - Modifier / Supprimer
+
+**Agences** :
+- `GET /agencies/` - Liste de toutes les agences
+- `GET /agencies/me` - Agences de l'utilisateur courant
+- `GET /agencies/{id}` - Detail agence avec statistiques
+- `POST /agencies/` - Creation d'une agence
 
 **Admin** :
 - `GET/POST /admin/consultants` - Liste / Creation consultants
@@ -209,7 +218,7 @@ cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload
 | `docs/ORYEM_PROMPT_INITIAL.md` | Brief projet, specs fonctionnelles, formules metier, plan sprints |
 | `docs/backend/ARCHITECTURE.md` | Architecture backend, config, flux auth, permissions, service comparables |
 | `docs/backend/API.md` | Reference complete : tous les endpoints, schemas, permissions, exemples |
-| `docs/backend/MODELS.md` | 13 modeles SQLAlchemy, 11 enums, schemas Pydantic, 7 migrations Alembic |
+| `docs/backend/MODELS.md` | 15 modeles SQLAlchemy, 11 enums, schemas Pydantic, 7 migrations Alembic |
 | `docs/backend/bdd/schema-bdd.md` | Schema BDD complet, tables, relations, PostGIS, workflow typique |
 | `docs/frontend/ARCHITECTURE.md` | Architecture frontend, navigation, AuthContext, services, workflow |
 | `docs/frontend/COMPONENTS.md` | Inventaire composants : 42+ applicatifs, 43+ UI (shadcn), hooks, contextes |

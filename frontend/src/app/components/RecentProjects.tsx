@@ -287,6 +287,9 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
                       de construction
                     </th>
                     <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      Agence
+                    </th>
+                    <th className="text-center px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
                       Actions
                     </th>
                   </tr>
@@ -348,6 +351,9 @@ export function RecentProjects({ onProjectClick }: RecentProjectsProps) {
                         </td>
                         <td className="px-6 text-center py-4 text-gray-700 whitespace-nowrap">
                           {project.property_info?.construction_year ?? "-"}
+                        </td>
+                        <td className="px-6 text-center py-4 text-gray-700 whitespace-nowrap text-sm">
+                          {project.agency?.name || "-"}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-end gap-2">

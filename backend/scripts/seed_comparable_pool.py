@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Script pour peupler la table comparable_pool avec des donnees de test.
-Cree des biens comparables autour de Paris pour tester la recherche spatiale.
+Cree des biens comparables autour de Valence (Drome) et Avignon (Vaucluse)
+pour tester la recherche spatiale.
 Usage: python scripts/seed_comparable_pool.py
 """
 import sys
@@ -19,55 +20,27 @@ from app.models import ComparablePool, ComparableSource, TransactionType
 
 
 def create_comparable_pool_data(db: Session) -> list:
-    """Cree des biens comparables de test autour de Paris."""
+    """Cree des biens comparables de test autour de Valence et Avignon."""
 
-    # Coordonnees de base pour differents secteurs de Paris/Ile-de-France
+    # Coordonnees de base pour differents secteurs
     locations = [
-        # Paris Centre
-        {"lat": 48.8566, "lng": 2.3522, "city": "Paris", "postal_code": "75001", "sector": "centre"},
-        {"lat": 48.8606, "lng": 2.3376, "city": "Paris", "postal_code": "75001", "sector": "centre"},
-        {"lat": 48.8534, "lng": 2.3488, "city": "Paris", "postal_code": "75004", "sector": "centre"},
-        # La Defense
-        {"lat": 48.8920, "lng": 2.2362, "city": "Courbevoie", "postal_code": "92400", "sector": "defense"},
-        {"lat": 48.8892, "lng": 2.2420, "city": "Puteaux", "postal_code": "92800", "sector": "defense"},
-        {"lat": 48.8950, "lng": 2.2300, "city": "Courbevoie", "postal_code": "92400", "sector": "defense"},
-        # Neuilly-sur-Seine
-        {"lat": 48.8848, "lng": 2.2686, "city": "Neuilly-sur-Seine", "postal_code": "92200", "sector": "neuilly"},
-        {"lat": 48.8810, "lng": 2.2750, "city": "Neuilly-sur-Seine", "postal_code": "92200", "sector": "neuilly"},
-        # Boulogne-Billancourt
-        {"lat": 48.8352, "lng": 2.2410, "city": "Boulogne-Billancourt", "postal_code": "92100", "sector": "boulogne"},
-        {"lat": 48.8400, "lng": 2.2350, "city": "Boulogne-Billancourt", "postal_code": "92100", "sector": "boulogne"},
-        # Saint-Denis (entrepots)
-        {"lat": 48.9362, "lng": 2.3574, "city": "Saint-Denis", "postal_code": "93200", "sector": "saintdenis"},
-        {"lat": 48.9300, "lng": 2.3600, "city": "Saint-Denis", "postal_code": "93200", "sector": "saintdenis"},
-        # Gennevilliers (industriel)
-        {"lat": 48.9276, "lng": 2.2902, "city": "Gennevilliers", "postal_code": "92230", "sector": "gennevilliers"},
-        {"lat": 48.9300, "lng": 2.2850, "city": "Gennevilliers", "postal_code": "92230", "sector": "gennevilliers"},
-        # Roissy (logistique)
-        {"lat": 49.0097, "lng": 2.5479, "city": "Roissy-en-France", "postal_code": "95700", "sector": "roissy"},
-        {"lat": 49.0050, "lng": 2.5400, "city": "Roissy-en-France", "postal_code": "95700", "sector": "roissy"},
         # =========================
         # VALENCE (DROME)
         # =========================
+        # Valence Centre-ville (bureaux, commerces)
         {"lat": 44.9334, "lng": 4.8924, "city": "Valence", "postal_code": "26000", "sector": "valence_centre"},
         {"lat": 44.9315, "lng": 4.8890, "city": "Valence", "postal_code": "26000", "sector": "valence_centre"},
         {"lat": 44.9360, "lng": 4.8955, "city": "Valence", "postal_code": "26000", "sector": "valence_centre"},
         {"lat": 44.9285, "lng": 4.9000, "city": "Valence", "postal_code": "26000", "sector": "valence_centre"},
+        {"lat": 44.9340, "lng": 4.8870, "city": "Valence", "postal_code": "26000", "sector": "valence_centre"},
+        {"lat": 44.9300, "lng": 4.8940, "city": "Valence", "postal_code": "26000", "sector": "valence_centre"},
 
-        # Zone Briffaut / Lautagne (tertiaire / activite)
+        # Zone Briffaut (tertiaire / activite)
         {"lat": 44.9050, "lng": 4.8730, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
         {"lat": 44.9075, "lng": 4.8780, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
         {"lat": 44.9100, "lng": 4.8700, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
+        {"lat": 44.9060, "lng": 4.8760, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
 
-        # Rovaltain / Gare TGV (Alixan - proche Valence)
-        {"lat": 44.9910, "lng": 4.9750, "city": "Alixan", "postal_code": "26300", "sector": "valence_tgv"},
-        {"lat": 44.9885, "lng": 4.9700, "city": "Alixan", "postal_code": "26300", "sector": "valence_tgv"},
-        {"lat": 44.9930, "lng": 4.9800, "city": "Alixan", "postal_code": "26300", "sector": "valence_tgv"},
-
-        # Portes-les-Valence (industriel / logistique)
-        {"lat": 44.8750, "lng": 4.8750, "city": "Portes-les-Valence", "postal_code": "26800", "sector": "valence_industriel"},
-        {"lat": 44.8700, "lng": 4.8800, "city": "Portes-les-Valence", "postal_code": "26800", "sector": "valence_industriel"},
-        {"lat": 44.8725, "lng": 4.8680, "city": "Portes-les-Valence", "postal_code": "26800", "sector": "valence_industriel"},
         # Lautagne (Valence - zone tertiaire / activite)
         {"lat": 44.9065, "lng": 4.9013, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
         {"lat": 44.9048, "lng": 4.9025, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
@@ -75,7 +48,6 @@ def create_comparable_pool_data(db: Session) -> list:
         {"lat": 44.9095, "lng": 4.9006, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
         {"lat": 44.9052, "lng": 4.8999, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
         {"lat": 44.9078, "lng": 4.9034, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
-        # Lautagne (Valence - zone tertiaire / activite)
         {"lat": 44.9065, "lng": 4.8715, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
         {"lat": 44.9048, "lng": 4.8682, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
         {"lat": 44.9082, "lng": 4.8738, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
@@ -83,43 +55,106 @@ def create_comparable_pool_data(db: Session) -> list:
         {"lat": 44.9052, "lng": 4.8750, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
         {"lat": 44.9078, "lng": 4.8665, "city": "Valence", "postal_code": "26000", "sector": "valence_activite"},
 
+        # Rovaltain / Gare TGV (Alixan - proche Valence)
+        {"lat": 44.9910, "lng": 4.9750, "city": "Alixan", "postal_code": "26300", "sector": "valence_tgv"},
+        {"lat": 44.9885, "lng": 4.9700, "city": "Alixan", "postal_code": "26300", "sector": "valence_tgv"},
+        {"lat": 44.9930, "lng": 4.9800, "city": "Alixan", "postal_code": "26300", "sector": "valence_tgv"},
+        {"lat": 44.9900, "lng": 4.9720, "city": "Alixan", "postal_code": "26300", "sector": "valence_tgv"},
+
+        # Portes-les-Valence (industriel / logistique)
+        {"lat": 44.8750, "lng": 4.8750, "city": "Portes-les-Valence", "postal_code": "26800", "sector": "valence_industriel"},
+        {"lat": 44.8700, "lng": 4.8800, "city": "Portes-les-Valence", "postal_code": "26800", "sector": "valence_industriel"},
+        {"lat": 44.8725, "lng": 4.8680, "city": "Portes-les-Valence", "postal_code": "26800", "sector": "valence_industriel"},
+        {"lat": 44.8740, "lng": 4.8720, "city": "Portes-les-Valence", "postal_code": "26800", "sector": "valence_industriel"},
+
+        # Bourg-les-Valence (mixte)
+        {"lat": 44.9450, "lng": 4.8850, "city": "Bourg-les-Valence", "postal_code": "26500", "sector": "valence_centre"},
+        {"lat": 44.9470, "lng": 4.8880, "city": "Bourg-les-Valence", "postal_code": "26500", "sector": "valence_centre"},
+
+        # =========================
+        # AVIGNON (VAUCLUSE)
+        # =========================
+        # Avignon Intra-muros (bureaux, commerces)
+        {"lat": 43.9493, "lng": 4.8055, "city": "Avignon", "postal_code": "84000", "sector": "avignon_centre"},
+        {"lat": 43.9510, "lng": 4.8070, "city": "Avignon", "postal_code": "84000", "sector": "avignon_centre"},
+        {"lat": 43.9475, "lng": 4.8030, "city": "Avignon", "postal_code": "84000", "sector": "avignon_centre"},
+        {"lat": 43.9520, "lng": 4.8090, "city": "Avignon", "postal_code": "84000", "sector": "avignon_centre"},
+        {"lat": 43.9460, "lng": 4.8010, "city": "Avignon", "postal_code": "84000", "sector": "avignon_centre"},
+        {"lat": 43.9500, "lng": 4.8045, "city": "Avignon", "postal_code": "84000", "sector": "avignon_centre"},
+
+        # Courtine / Gare TGV Avignon (tertiaire)
+        {"lat": 43.9217, "lng": 4.7863, "city": "Avignon", "postal_code": "84000", "sector": "avignon_tgv"},
+        {"lat": 43.9230, "lng": 4.7880, "city": "Avignon", "postal_code": "84000", "sector": "avignon_tgv"},
+        {"lat": 43.9200, "lng": 4.7850, "city": "Avignon", "postal_code": "84000", "sector": "avignon_tgv"},
+        {"lat": 43.9245, "lng": 4.7895, "city": "Avignon", "postal_code": "84000", "sector": "avignon_tgv"},
+
+        # Agroparc (zone technopole - bureaux, activite)
+        {"lat": 43.9160, "lng": 4.8750, "city": "Avignon", "postal_code": "84000", "sector": "avignon_activite"},
+        {"lat": 43.9180, "lng": 4.8770, "city": "Avignon", "postal_code": "84000", "sector": "avignon_activite"},
+        {"lat": 43.9145, "lng": 4.8730, "city": "Avignon", "postal_code": "84000", "sector": "avignon_activite"},
+        {"lat": 43.9170, "lng": 4.8760, "city": "Avignon", "postal_code": "84000", "sector": "avignon_activite"},
+        {"lat": 43.9190, "lng": 4.8780, "city": "Avignon", "postal_code": "84000", "sector": "avignon_activite"},
+        {"lat": 43.9155, "lng": 4.8740, "city": "Avignon", "postal_code": "84000", "sector": "avignon_activite"},
+
+        # Le Pontet (zone commerciale / industrielle)
+        {"lat": 43.9620, "lng": 4.8600, "city": "Le Pontet", "postal_code": "84130", "sector": "avignon_industriel"},
+        {"lat": 43.9640, "lng": 4.8620, "city": "Le Pontet", "postal_code": "84130", "sector": "avignon_industriel"},
+        {"lat": 43.9600, "lng": 4.8580, "city": "Le Pontet", "postal_code": "84130", "sector": "avignon_industriel"},
+        {"lat": 43.9660, "lng": 4.8640, "city": "Le Pontet", "postal_code": "84130", "sector": "avignon_industriel"},
+
+        # Villeneuve-les-Avignon (bureaux, commerces)
+        {"lat": 43.9650, "lng": 4.7950, "city": "Villeneuve-les-Avignon", "postal_code": "30400", "sector": "avignon_centre"},
+        {"lat": 43.9670, "lng": 4.7970, "city": "Villeneuve-les-Avignon", "postal_code": "30400", "sector": "avignon_centre"},
+        {"lat": 43.9630, "lng": 4.7930, "city": "Villeneuve-les-Avignon", "postal_code": "30400", "sector": "avignon_centre"},
+
+        # Montfavet (activite / logistique)
+        {"lat": 43.9280, "lng": 4.8550, "city": "Avignon", "postal_code": "84140", "sector": "avignon_activite"},
+        {"lat": 43.9300, "lng": 4.8570, "city": "Avignon", "postal_code": "84140", "sector": "avignon_activite"},
+        {"lat": 43.9260, "lng": 4.8530, "city": "Avignon", "postal_code": "84140", "sector": "avignon_activite"},
+        {"lat": 43.9290, "lng": 4.8560, "city": "Avignon", "postal_code": "84140", "sector": "avignon_activite"},
+
+        # ZI Avignon Nord (industriel / entrepots)
+        {"lat": 43.9750, "lng": 4.8400, "city": "Avignon", "postal_code": "84000", "sector": "avignon_industriel"},
+        {"lat": 43.9770, "lng": 4.8420, "city": "Avignon", "postal_code": "84000", "sector": "avignon_industriel"},
+        {"lat": 43.9730, "lng": 4.8380, "city": "Avignon", "postal_code": "84000", "sector": "avignon_industriel"},
+
     ]
 
-    # Types de biens avec caracteristiques typiques
+    # Types de biens avec caracteristiques typiques (prix province Valence/Avignon)
     property_configs = {
         "office": {
-            "surfaces": [150, 280, 450, 600, 850, 1200, 2500],
-            "years": [1985, 1995, 2005, 2010, 2015, 2018, 2022],
-            "sale_prices_m2": [3500, 4000, 4500, 5000, 5500, 6000, 7000],
-            "rent_prices_m2": [250, 300, 350, 400, 450, 500, 600],
-            "addresses_prefix": ["Tour", "Immeuble", "Centre d'affaires", "Building"],
+            "surfaces": [80, 150, 280, 450, 600, 850, 1200, 2500],
+            "years": [1975, 1985, 1995, 2005, 2010, 2015, 2018, 2022],
+            "sale_prices_m2": [1200, 1500, 1800, 2200, 2600, 3000, 3500],
+            "rent_prices_m2": [80, 100, 120, 150, 180, 220, 280],
+            "addresses_prefix": ["Immeuble", "Centre d'affaires", "Parc tertiaire", "Bureaux"],
         },
         "warehouse": {
             "surfaces": [500, 1000, 2000, 3500, 5000, 8000, 15000],
             "years": [1975, 1985, 1995, 2005, 2010, 2015, 2020],
-            "sale_prices_m2": [800, 1000, 1200, 1500, 1800, 2000, 2500],
-            "rent_prices_m2": [50, 70, 90, 110, 130, 150, 180],
-            "addresses_prefix": ["Entrepot", "Batiment logistique", "Plateforme", "Hub"],
+            "sale_prices_m2": [400, 550, 700, 900, 1100, 1300, 1600],
+            "rent_prices_m2": [30, 40, 55, 70, 85, 100, 130],
+            "addresses_prefix": ["Entrepot", "Batiment logistique", "Plateforme", "Hub logistique"],
         },
         "retail": {
-            "surfaces": [80, 150, 250, 400, 600, 1000, 2000],
+            "surfaces": [50, 80, 150, 250, 400, 600, 1000],
             "years": [1970, 1985, 1995, 2000, 2010, 2015, 2020],
-            "sale_prices_m2": [4000, 5000, 6000, 7500, 9000, 11000, 15000],
-            "rent_prices_m2": [400, 500, 600, 750, 900, 1100, 1500],
-            "addresses_prefix": ["Boutique", "Local commercial", "Magasin", "Galerie"],
+            "sale_prices_m2": [1800, 2200, 2800, 3500, 4500, 5500, 7000],
+            "rent_prices_m2": [150, 200, 280, 350, 450, 550, 700],
+            "addresses_prefix": ["Boutique", "Local commercial", "Magasin", "Commerce"],
         },
         "industrial": {
             "surfaces": [300, 600, 1000, 1500, 2500, 4000, 6000],
             "years": [1965, 1980, 1990, 2000, 2008, 2015, 2020],
-            "sale_prices_m2": [600, 800, 1000, 1300, 1600, 2000, 2500],
-            "rent_prices_m2": [40, 55, 70, 90, 110, 140, 180],
-            "addresses_prefix": ["Atelier", "Local d'activite", "Batiment industriel", "Unite"],
+            "sale_prices_m2": [350, 500, 650, 850, 1050, 1300, 1600],
+            "rent_prices_m2": [25, 35, 50, 65, 80, 100, 130],
+            "addresses_prefix": ["Atelier", "Local d'activite", "Batiment industriel", "Unite de production"],
         },
         "land": {
             "surfaces": [500, 1000, 2000, 5000, 10000, 20000, 50000],
             "years": [None, None, None, None, None, None, None],
-            "sale_prices_m2": [200, 350, 500, 700, 1000, 1500, 2500],
-            "rent_prices_m2": [15, 25, 40, 60, 80, 100, 150],
+            "sale_prices_m2": [80, 120, 180, 280, 400, 600, 1000],
+            "rent_prices_m2": [8, 12, 20, 30, 45, 60, 90],
             "addresses_prefix": ["Terrain", "Parcelle", "Foncier", "Lot"],
         },
     }
@@ -127,22 +162,41 @@ def create_comparable_pool_data(db: Session) -> list:
     comparables = []
     base_date = date.today()
 
+    # Rues specifiques par zone
+    streets_valence = [
+        "Boulevard Bancel", "Avenue Victor Hugo", "Rue Emile Augier",
+        "Boulevard du General de Gaulle", "Avenue de Romans", "Rue Madier de Montjau",
+        "Place de la Liberte", "Rue Faventines", "Avenue de Chabeuil",
+        "Rue Jean Jaures", "Boulevard d'Alsace", "Rue Pierre Semard",
+        "Avenue Sadi Carnot", "Rue Montplaisir", "Cours Joubernon",
+    ]
+    streets_avignon = [
+        "Rue de la Republique", "Place de l'Horloge", "Rue Joseph Vernet",
+        "Boulevard Saint-Roch", "Avenue Monclar", "Rue Carreterie",
+        "Cours Jean Jaures", "Avenue de la Trillade", "Route de Marseille",
+        "Rue des Teinturiers", "Avenue Pierre Semard", "Boulevard Limbert",
+        "Avenue de Fontcouverte", "Chemin de l'Amandier", "Avenue de l'Arrousaire",
+    ]
+
     for i, loc in enumerate(locations):
         # Determiner le type de bien selon le secteur
-        if loc["sector"] in ["centre", "defense", "neuilly", "valence_centre", "valence_tgv"]:
+        if loc["sector"] in ["valence_centre", "valence_tgv", "avignon_centre", "avignon_tgv"]:
             property_types = ["office", "retail"]
 
-        elif loc["sector"] in ["saintdenis", "gennevilliers", "valence_industriel"]:
+        elif loc["sector"] in ["valence_industriel", "avignon_industriel"]:
             property_types = ["warehouse", "industrial"]
 
-        elif loc["sector"] == "valence_activite":
+        elif loc["sector"] in ["valence_activite", "avignon_activite"]:
             property_types = ["office", "warehouse", "industrial"]
-
-        elif loc["sector"] == "roissy":
-            property_types = ["warehouse", "land"]
 
         else:
             property_types = ["office", "retail"]
+
+        # Choisir les rues selon la zone
+        if loc["city"] in ["Valence", "Alixan", "Portes-les-Valence", "Bourg-les-Valence"]:
+            streets = streets_valence
+        else:
+            streets = streets_avignon
 
         # Creer 3-5 biens par localisation
         for j in range(random.randint(3, 5)):
@@ -181,9 +235,6 @@ def create_comparable_pool_data(db: Session) -> list:
             # Generer l'adresse
             prefix = random.choice(config["addresses_prefix"])
             street_num = random.randint(1, 150)
-            streets = ["Rue de la Paix", "Avenue des Champs", "Boulevard Haussmann",
-                      "Rue du Commerce", "Avenue de la Grande Armee", "Rue de Rivoli",
-                      "Boulevard de la Liberation", "Rue Jean Jaures", "Avenue Victor Hugo"]
             street = random.choice(streets)
             address = f"{prefix} - {street_num} {street}, {loc['postal_code']} {loc['city']}"
 

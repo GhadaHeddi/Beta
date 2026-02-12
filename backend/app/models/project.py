@@ -31,6 +31,7 @@ class Project(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    agency_id = Column(Integer, ForeignKey("agencies.id"), nullable=True, index=True)
     title = Column(String, nullable=False)
     address = Column(String, nullable=False)
     long_address = Column(String, nullable=True)
@@ -43,6 +44,7 @@ class Project(Base):
 
     # Relations
     user = relationship("User", back_populates="projects")
+    agency = relationship("Agency", back_populates="projects")
     property_info = relationship("PropertyInfo", back_populates="project", uselist=False, cascade="all, delete-orphan")
     documents = relationship("Document", back_populates="project", cascade="all, delete-orphan")
     comparables = relationship("Comparable", back_populates="project", cascade="all, delete-orphan")

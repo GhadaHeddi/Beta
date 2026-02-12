@@ -49,7 +49,7 @@ export function Header({ onLogoClick, onDashboardClick, searchQuery = "", onTras
         avatar: undefined,
       };
 
-  const handleAddConsultant = async (name: string, email: string, password: string) => {
+  const handleAddConsultant = async (name: string, email: string, password: string, agencyId?: number) => {
     if (!accessToken) return;
 
     try {
@@ -58,18 +58,23 @@ export function Header({ onLogoClick, onDashboardClick, searchQuery = "", onTras
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
 
+      const body: Record<string, unknown> = {
+        email,
+        password,
+        first_name: firstName,
+        last_name: lastName,
+      };
+      if (agencyId) {
+        body.agency_id = agencyId;
+      }
+
       const response = await fetch(`${API_BASE_URL}/admin/consultants`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          email,
-          password,
-          first_name: firstName,
-          last_name: lastName,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (response.ok) {
@@ -233,9 +238,16 @@ export function Header({ onLogoClick, onDashboardClick, searchQuery = "", onTras
                     <p className="text-sm font-medium text-gray-900">
                       {userData.name}
                     </p>
-                    <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
-                      {userData.role}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+                        {userData.role}
+                      </span>
+                      {currentUser?.agency_name && (
+                        <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full font-medium truncate max-w-[120px]">
+                          {currentUser.agency_name}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Chevron */}

@@ -12,6 +12,8 @@ interface UserData {
   avatar_url?: string;
   phone?: string;
   created_at?: string;
+  agency_id?: number;
+  agency_name?: string;
 }
 
 interface AuthContextType {
