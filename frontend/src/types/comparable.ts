@@ -4,6 +4,7 @@
 
 export type ComparableSource = 'arthur_loyd' | 'concurrence';
 export type TransactionType = 'sale' | 'rent';
+export type ComparableStatus = 'transaction' | 'disponible';
 
 /**
  * Comparable du pool de reference
@@ -25,6 +26,7 @@ export interface ComparablePool {
   source: ComparableSource;
   source_reference: string | null;
   photo_url: string | null;
+  status: ComparableStatus;
   distance_km?: number;
 }
 
@@ -50,11 +52,22 @@ export interface MapCenter {
 }
 
 /**
+ * Stats par perimetre geographique
+ */
+export interface PerimeterStats {
+  label: string;
+  avg_rent_per_m2: number | null;
+  avg_sale_per_m2: number | null;
+  total_count: number;
+}
+
+/**
  * Reponse de la recherche de comparables
  */
 export interface ComparableSearchResponse {
   comparables: ComparablePool[];
   stats: PriceStats;
+  perimeter_stats: PerimeterStats[];
   center: MapCenter | null;
 }
 
@@ -92,6 +105,7 @@ export interface ComparisonFilters {
   yearMax: number | null;
   distanceKm: number;
   source: 'all' | 'arthur_loyd' | 'concurrence';
+  status: 'all' | 'transaction' | 'disponible';
 }
 
 /**
@@ -103,7 +117,8 @@ export const DEFAULT_COMPARISON_FILTERS: ComparisonFilters = {
   yearMin: null,
   yearMax: null,
   distanceKm: 5,
-  source: 'all'
+  source: 'all',
+  status: 'all'
 };
 
 /**

@@ -1,7 +1,7 @@
 """
 Modèle Simulation - Simulations financières
 """
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SQLEnum, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SQLEnum, JSON, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from enum import Enum
@@ -23,11 +23,15 @@ class Simulation(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
 
-    simulation_type = Column(SQLEnum(SimulationType), nullable=False)
+    simulation_type = Column(
+        SQLEnum(SimulationType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+    )
     name = Column(String, nullable=False)  # Nom libre de la simulation
     input_data = Column(JSON, nullable=False)  # Données d'entrée
     output_data = Column(JSON, nullable=True)  # Résultats calculés
     notes = Column(String, nullable=True)
+    selected = Column(Boolean, default=False, nullable=False)
 
     # Métadonnées
     created_at = Column(DateTime, default=datetime.utcnow)

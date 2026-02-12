@@ -8,6 +8,7 @@ import { SimulationStep } from "@/app/components/evaluation/SimulationStep";
 import { FinalisationStep } from "@/app/components/evaluation/FinalisationStep";
 import { DocumentViewer } from "@/app/components/evaluation/DocumentViewer";
 import { AIAssistant } from "@/app/components/evaluation/AIAssistant";
+import { PanelRightOpen, PanelRightClose } from "lucide-react";
 import { getPropertyInfo, getProjectFiles, getFileUrl } from "@/services/projectService";
 
 interface Document {
@@ -113,6 +114,7 @@ export function EvaluationProcess({
 
   const [savedLatitude, setSavedLatitude] = useState<number | null>(null);
   const [savedLongitude, setSavedLongitude] = useState<number | null>(null);
+  const [isAICollapsed, setIsAICollapsed] = useState(false);
 
   // Charger les donnees sauvegardees au montage
   useEffect(() => {
@@ -299,7 +301,12 @@ export function EvaluationProcess({
         );
 
       case "simulation":
-        return <SimulationStep />;
+        return (
+          <SimulationStep
+            projectId={projectId}
+            onStepComplete={() => setStepsCompletion(prev => ({ ...prev, simulation: true }))}
+          />
+        );
 
       case "finalisation":
         return <FinalisationStep />;
@@ -355,13 +362,28 @@ export function EvaluationProcess({
 
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 overflow-auto">
-          <div className="max-w-7.5xl mx-auto px-8 py-6">{renderStep()}</div>
+        <div className="flex-1 overflow-auto relative">
+          <div className={`${isAICollapsed ? '' : 'max-w-7.5xl'} mx-auto px-8 py-6`}>{renderStep()}</div>
+
+          {/* Bouton toggle AI */}
+          <button
+            onClick={() => setIsAICollapsed((prev) => !prev)}
+            className="fixed right-4 top-1/2 -translate-y-1/2 z-30 bg-white border border-gray-300 rounded-full p-2 shadow-md hover:bg-gray-100 transition-colors"
+            title={isAICollapsed ? "Ouvrir l'assistant IA" : "Fermer l'assistant IA"}
+          >
+            {isAICollapsed ? (
+              <PanelRightOpen className="w-5 h-5 text-gray-600" />
+            ) : (
+              <PanelRightClose className="w-5 h-5 text-gray-600" />
+            )}
+          </button>
         </div>
 
-        <div className="w-[25%] flex-shrink-0">
-          <AIAssistant />
-        </div>
+        {!isAICollapsed && (
+          <div className="w-[25%] flex-shrink-0 transition-all duration-300">
+            <AIAssistant />
+          </div>
+        )}
       </div>
     </div>
   );

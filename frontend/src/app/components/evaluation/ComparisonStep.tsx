@@ -6,6 +6,7 @@ import {
   ComparableMap,
   ComparisonTable,
   SelectedComparablesList,
+  QuickAddForm,
 } from './comparison';
 import {
   searchComparables,
@@ -13,6 +14,7 @@ import {
   selectComparable,
   deselectComparable,
   validateComparables,
+  updateComparableFields,
 } from '@/services/projectService';
 import type {
   ComparisonFilters as FiltersType,
@@ -35,6 +37,7 @@ const DEFAULT_FILTERS: FiltersType = {
   yearMax: null,
   distanceKm: 5,
   source: 'all',
+  status: 'all',
 };
 
 export function ComparisonStep({ projectId, evaluatedProperty, onStepComplete }: Props) {
@@ -126,10 +129,8 @@ export function ComparisonStep({ projectId, evaluatedProperty, onStepComplete }:
     const comparedIds = comparedItems.map((c) => c.id);
     const allSelected = comparedIds.every((id) => finalItems.some((f) => f.id === id));
     if (allSelected) {
-      // Deselectionner tous ceux qui sont dans le tableau
       setFinalItems((prev) => prev.filter((f) => !comparedIds.includes(f.id)));
     } else {
-      // Ajouter ceux qui ne sont pas encore selectionnes
       setFinalItems((prev) => {
         const existingIds = prev.map((f) => f.id);
         const newItems = comparedItems.filter((c) => !existingIds.includes(c.id));
@@ -143,7 +144,6 @@ export function ComparisonStep({ projectId, evaluatedProperty, onStepComplete }:
     try {
       await deselectComparable(projectId, id);
       setFinalItems((prev) => prev.filter((f) => f.id !== id));
-      // Aussi retirer du tableau si present
       setComparedItems((prev) => prev.filter((c) => c.id !== id));
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors de la suppression');
@@ -183,6 +183,25 @@ export function ComparisonStep({ projectId, evaluatedProperty, onStepComplete }:
     setFilters(DEFAULT_FILTERS);
   };
 
+  // Mise a jour des champs d'un comparable (edition inline)
+  const handleUpdateComparable = async (id: number, fields: { surface?: number; price?: number; price_per_m2?: number; construction_year?: number }) => {
+    try {
+      const updated = await updateComparableFields(projectId, id, fields);
+      const updateItem = (item: SelectedComparable) =>
+        item.id === id ? { ...item, ...updated } : item;
+      setComparedItems((prev) => prev.map(updateItem));
+      setFinalItems((prev) => prev.map(updateItem));
+      toast.success('Valeur mise a jour');
+    } catch (error: any) {
+      toast.error(error.message || 'Erreur lors de la mise a jour');
+    }
+  };
+
+  // Callback apres ajout rapide
+  const handleQuickAddSuccess = () => {
+    fetchComparables();
+  };
+
   // IDs des comparables dans le tableau (pour surligner sur la carte)
   const comparedIds = comparedItems.map((c) =>
     c.source_reference ? parseInt(c.source_reference) : 0
@@ -192,17 +211,23 @@ export function ComparisonStep({ projectId, evaluatedProperty, onStepComplete }:
 
   return (
     <div className="space-y-6">
-      <PriceIndicators stats={searchResults?.stats || null} loading={loading} />
+      {/* Bandeau d'indicateurs de prix - 3 perimetres */}
+      <PriceIndicators
+        perimeterStats={searchResults?.perimeter_stats || null}
+        loading={loading}
+      />
 
+      {/* Layout 3 colonnes : Ajout rapide | Carte | Filtres */}
       <div className="flex gap-4">
-        <div className="w-[280px] shrink-0">
-          <ComparisonFilters
-            filters={filters}
-            onFiltersChange={setFilters}
-            onReset={handleResetFilters}
+        {/* Colonne gauche - Ajout rapide */}
+        <div className="w-[250px] shrink-0">
+          <QuickAddForm
+            projectId={projectId}
+            onAdded={handleQuickAddSuccess}
           />
         </div>
 
+        {/* Colonne centre - Carte */}
         <div className="flex-1 min-w-0">
           <ComparableMap
             center={searchResults?.center || null}
@@ -212,8 +237,18 @@ export function ComparisonStep({ projectId, evaluatedProperty, onStepComplete }:
             onMarkerClick={handleMarkerClick}
           />
         </div>
+
+        {/* Colonne droite - Filtres */}
+        <div className="w-[280px] shrink-0">
+          <ComparisonFilters
+            filters={filters}
+            onFiltersChange={setFilters}
+            onReset={handleResetFilters}
+          />
+        </div>
       </div>
 
+      {/* Tableau de comparaison */}
       <ComparisonTable
         evaluatedProperty={evaluatedProperty}
         selectedComparables={comparedItems}
@@ -221,8 +256,10 @@ export function ComparisonStep({ projectId, evaluatedProperty, onStepComplete }:
         onSelect={handleToggleSelect}
         onSelectAll={handleSelectAll}
         finalSelection={finalSelectionIds}
+        onUpdate={handleUpdateComparable}
       />
 
+      {/* Liste des biens selectionnes */}
       <SelectedComparablesList
         items={finalItems}
         onRemove={handleRemoveFromFinal}
