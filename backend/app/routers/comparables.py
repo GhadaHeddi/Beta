@@ -15,6 +15,7 @@ from app.services.comparable_service import (
     select_comparable_from_pool,
     deselect_comparable,
     update_comparable_adjustment,
+    update_comparable_fields,
     validate_project_comparables,
     ensure_property_coordinates,
     ComparableSearchParams
@@ -44,6 +45,7 @@ class ComparablePoolResponse(BaseModel):
     source: str
     source_reference: Optional[str]
     photo_url: Optional[str]
+    status: Optional[str] = "transaction"
     distance_km: Optional[float]
 
     class Config:
@@ -67,10 +69,19 @@ class CenterResponse(BaseModel):
     lng: float
 
 
+class PerimeterStatsResponse(BaseModel):
+    """Schema de reponse pour les stats d'un perimetre geographique"""
+    label: str
+    avg_rent_per_m2: Optional[float]
+    avg_sale_per_m2: Optional[float]
+    total_count: int
+
+
 class ComparableSearchResponse(BaseModel):
     """Schema de reponse pour la recherche de comparables"""
     comparables: List[ComparablePoolResponse]
     stats: PriceStatsResponse
+    perimeter_stats: List[PerimeterStatsResponse] = []
     center: Optional[CenterResponse]
 
 
@@ -111,6 +122,14 @@ class UpdateAdjustmentRequest(BaseModel):
     adjustment: float
 
 
+class UpdateComparableFieldsRequest(BaseModel):
+    """Schema de requete pour mettre a jour les champs d'un comparable"""
+    surface: Optional[float] = None
+    price: Optional[float] = None
+    price_per_m2: Optional[float] = None
+    construction_year: Optional[int] = None
+
+
 # === Routes ===
 
 @router.get("/search", response_model=ComparableSearchResponse)
@@ -122,6 +141,7 @@ async def search_comparable_properties(
     year_max: Optional[int] = Query(None, description="Annee de construction maximum"),
     distance_km: float = Query(5.0, ge=0.1, le=50, description="Rayon de recherche en km"),
     source: Optional[str] = Query("all", description="Source: all, arthur_loyd, concurrence"),
+    comparable_status: Optional[str] = Query("all", description="Statut: all, transaction, disponible"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -144,7 +164,8 @@ async def search_comparable_properties(
         year_min=year_min,
         year_max=year_max,
         distance_km=distance_km,
-        source=source
+        source=source,
+        status=comparable_status
     )
 
     # Effectuer la recherche
@@ -321,6 +342,7 @@ async def search_comparable_properties_dev(
     year_max: Optional[int] = Query(None),
     distance_km: float = Query(5.0, ge=0.1, le=50),
     source: Optional[str] = Query("all"),
+    comparable_status: Optional[str] = Query("all"),
     db: Session = Depends(get_db)
 ):
     """
@@ -343,7 +365,8 @@ async def search_comparable_properties_dev(
         year_min=year_min,
         year_max=year_max,
         distance_km=distance_km,
-        source=source
+        source=source,
+        status=comparable_status
     )
 
     result = search_comparables(db, project_id, params)
@@ -407,3 +430,31 @@ async def remove_comparable_dev(
             detail="Comparable non trouve"
         )
     return None
+
+
+@router.patch("/dev/select/{comparable_id}", response_model=SelectedComparableResponse)
+async def update_comparable_fields_dev(
+    project_id: int,
+    comparable_id: int,
+    data: UpdateComparableFieldsRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    [DEV ONLY] Mise a jour des champs d'un comparable sans authentification.
+    Permet de corriger surface, prix ou annee de construction.
+    """
+    comparable = update_comparable_fields(
+        db, project_id, comparable_id,
+        surface=data.surface,
+        price=data.price,
+        price_per_m2=data.price_per_m2,
+        construction_year=data.construction_year
+    )
+
+    if not comparable:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Comparable non trouve"
+        )
+
+    return comparable

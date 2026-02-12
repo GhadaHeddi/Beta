@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
-from app.models import ComparablePool, ComparableSource, TransactionType, Project, PropertyInfo, Comparable
+from app.models import ComparablePool, ComparableSource, TransactionType, ComparableStatus, Project, PropertyInfo, Comparable
 
 
 def geocode_address(address: str) -> Optional[Tuple[float, float]]:
@@ -72,6 +72,7 @@ class ComparableSearchParams:
     year_max: Optional[int] = None
     distance_km: float = 5.0
     source: Optional[str] = "all"
+    status: Optional[str] = "all"
 
 
 @dataclass
@@ -94,6 +95,7 @@ def search_comparables(
     """
     Recherche des biens comparables dans le pool selon les filtres.
     Le filtre par type de bien est automatique (meme type que le projet).
+    Retourne les stats pour 3 perimetres geographiques.
 
     Args:
         db: Session de base de donnees
@@ -101,36 +103,43 @@ def search_comparables(
         params: Parametres de recherche
 
     Returns:
-        Dict avec comparables, stats et center
+        Dict avec comparables, stats, perimeter_stats et center
     """
+    empty_result = {
+        "comparables": [], "stats": _empty_stats(),
+        "perimeter_stats": _empty_perimeter_stats(),
+        "center": None
+    }
+
     # Recuperer le projet et ses infos
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
-        return {"comparables": [], "stats": _empty_stats(), "center": None}
+        return empty_result
 
     property_info = db.query(PropertyInfo).filter(
         PropertyInfo.project_id == project_id
     ).first()
 
     if not property_info or not property_info.latitude or not property_info.longitude:
-        return {"comparables": [], "stats": _empty_stats(), "center": None}
+        return empty_result
 
     # Coordonnees du bien evalue
     center_lat = property_info.latitude
     center_lng = property_info.longitude
 
-    # Distance en metres
-    distance_meters = params.distance_km * 1000
+    # Rayon max pour couvrir les 3 perimetres (agglomeration = 15km)
+    max_radius_km = max(params.distance_km, 15.0)
+    max_distance_meters = max_radius_km * 1000
 
     # Construire la requete de base avec filtre par type de bien (AUTOMATIQUE)
     query = db.query(ComparablePool).filter(
         ComparablePool.property_type == project.property_type.value
     )
 
-    # Filtre spatial avec PostGIS (SQL brut pour le cast geography)
+    # Filtre spatial avec PostGIS — rayon max pour couvrir tous les perimetres
     query = query.filter(
         text("ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, :dist)")
-        .bindparams(lng=center_lng, lat=center_lat, dist=distance_meters)
+        .bindparams(lng=center_lng, lat=center_lat, dist=max_distance_meters)
     )
 
     # Appliquer les filtres de surface
@@ -152,16 +161,21 @@ def search_comparables(
         elif params.source == "concurrence":
             query = query.filter(ComparablePool.source == ComparableSource.CONCURRENCE)
 
-    # Executer la requete
-    comparables = query.all()
+    # Appliquer le filtre de statut
+    if params.status and params.status != "all":
+        query = query.filter(ComparablePool.status == params.status)
 
-    # Calculer la distance pour chaque comparable
+    # Executer la requete
+    all_comparables = query.all()
+
+    # Calculer la distance pour chaque comparable et construire les dicts
     comparables_with_distance = []
-    for comp in comparables:
-        distance_km = calculate_distance(
+    for comp in all_comparables:
+        dist_km = calculate_distance(
             center_lat, center_lng,
             comp.latitude, comp.longitude
         )
+        comp._calc_distance_km = dist_km  # stocker temporairement pour les stats
         comp_dict = {
             "id": comp.id,
             "address": comp.address,
@@ -172,23 +186,73 @@ def search_comparables(
             "property_type": comp.property_type,
             "surface": comp.surface,
             "construction_year": comp.construction_year,
-            "transaction_type": comp.transaction_type.value,
+            "transaction_type": comp.transaction_type.value if hasattr(comp.transaction_type, 'value') else comp.transaction_type,
             "price": comp.price,
             "price_per_m2": comp.price_per_m2,
             "transaction_date": comp.transaction_date.isoformat() if comp.transaction_date else None,
-            "source": comp.source.value,
+            "source": comp.source.value if hasattr(comp.source, 'value') else comp.source,
             "source_reference": comp.source_reference,
             "photo_url": comp.photo_url,
-            "distance_km": round(distance_km, 2)
+            "status": comp.status if isinstance(comp.status, str) else (comp.status.value if hasattr(comp.status, 'value') else "transaction"),
+            "distance_km": round(dist_km, 2)
         }
         comparables_with_distance.append(comp_dict)
 
-    # Calculer les statistiques
-    stats = calculate_stats(comparables)
+    # Filtrer pour la carte : uniquement les biens dans le rayon utilisateur
+    filtered_comparables = [
+        c for c in comparables_with_distance if c["distance_km"] <= params.distance_km
+    ]
+
+    # Calculer les stats globales (sur les biens filtres par distance utilisateur)
+    filtered_pool = [c for c in all_comparables if c._calc_distance_km <= params.distance_km]
+    stats = calculate_stats(filtered_pool)
+
+    # Calculer les stats par perimetre
+    # Recuperer la ville du projet pour le perimetre agglomeration
+    project_city = None
+    if property_info and hasattr(property_info, 'city') and property_info.city:
+        project_city = property_info.city
+    elif project.address:
+        # Extraire la ville de l'adresse si possible
+        project_city = _extract_city_from_address(project.address)
+
+    # Agglomeration : meme ville
+    agglo_comps = [c for c in all_comparables if c.city and project_city and c.city.lower() == project_city.lower()]
+    agglo_stats = calculate_stats(agglo_comps)
+
+    # Secteur : rayon 5km
+    sector_comps = [c for c in all_comparables if c._calc_distance_km <= 5.0]
+    sector_stats = calculate_stats(sector_comps)
+
+    # Proximite : rayon du filtre distance utilisateur
+    proximity_comps = filtered_pool
+    proximity_stats = calculate_stats(proximity_comps)
+
+    perimeter_stats = [
+        {
+            "label": f"Agglomeration — {project_city or 'N/A'}",
+            "avg_rent_per_m2": agglo_stats["avg_rent_per_m2"],
+            "avg_sale_per_m2": agglo_stats["avg_sale_per_m2"],
+            "total_count": agglo_stats["total_count"]
+        },
+        {
+            "label": "Secteur — 5 km",
+            "avg_rent_per_m2": sector_stats["avg_rent_per_m2"],
+            "avg_sale_per_m2": sector_stats["avg_sale_per_m2"],
+            "total_count": sector_stats["total_count"]
+        },
+        {
+            "label": f"Proximite — {params.distance_km} km",
+            "avg_rent_per_m2": proximity_stats["avg_rent_per_m2"],
+            "avg_sale_per_m2": proximity_stats["avg_sale_per_m2"],
+            "total_count": proximity_stats["total_count"]
+        }
+    ]
 
     return {
-        "comparables": comparables_with_distance,
+        "comparables": filtered_comparables,
         "stats": stats,
+        "perimeter_stats": perimeter_stats,
         "center": {"lat": center_lat, "lng": center_lng}
     }
 
@@ -258,6 +322,84 @@ def _empty_stats() -> Dict[str, Any]:
         "latest_sale_date": None,
         "total_count": 0
     }
+
+
+def _empty_perimeter_stats() -> List[Dict[str, Any]]:
+    """Retourne des stats de perimetre vides."""
+    return [
+        {"label": "Agglomeration", "avg_rent_per_m2": None, "avg_sale_per_m2": None, "total_count": 0},
+        {"label": "Secteur — 5 km", "avg_rent_per_m2": None, "avg_sale_per_m2": None, "total_count": 0},
+        {"label": "Proximite", "avg_rent_per_m2": None, "avg_sale_per_m2": None, "total_count": 0},
+    ]
+
+
+def _extract_city_from_address(address: str) -> Optional[str]:
+    """Extrait la ville d'une adresse. Heuristique simple basee sur le code postal."""
+    import re
+    # Chercher un pattern "CODE_POSTAL VILLE" dans l'adresse
+    match = re.search(r'\d{5}\s+(.+?)(?:,|$)', address)
+    if match:
+        return match.group(1).strip()
+    # Sinon, prendre le dernier element apres la virgule
+    parts = address.split(',')
+    if len(parts) >= 2:
+        last_part = parts[-1].strip()
+        # Enlever le code postal si present
+        city = re.sub(r'^\d{5}\s*', '', last_part)
+        return city.strip() if city.strip() else None
+    return None
+
+
+def quick_add_comparable(
+    db: Session,
+    project_id: int,
+    address: str,
+    surface: float,
+    price: float,
+    construction_year: Optional[int] = None
+) -> Optional[ComparablePool]:
+    """
+    Ajout rapide d'un bien comparable au pool.
+    Geocode l'adresse, cree un ComparablePool avec source Arthur Loyd.
+
+    Returns:
+        Le ComparablePool cree ou None si geocodage echoue
+    """
+    # Recuperer le projet pour le property_type
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        return None
+
+    # Geocoder l'adresse
+    coords = geocode_address(address)
+    if not coords:
+        return None
+
+    lat, lng = coords
+    price_per_m2 = round(price / surface, 2)
+
+    # Creer le comparable
+    new_comparable = ComparablePool(
+        address=address,
+        latitude=lat,
+        longitude=lng,
+        geom=func.ST_SetSRID(func.ST_MakePoint(lng, lat), 4326),
+        property_type=project.property_type.value,
+        surface=surface,
+        construction_year=construction_year,
+        transaction_type=TransactionType.SALE,
+        price=price,
+        price_per_m2=price_per_m2,
+        transaction_date=date.today(),
+        source=ComparableSource.ARTHUR_LOYD,
+        status="disponible",
+    )
+
+    db.add(new_comparable)
+    db.commit()
+    db.refresh(new_comparable)
+
+    return new_comparable
 
 
 def get_selected_comparables(db: Session, project_id: int) -> List[Comparable]:
@@ -392,6 +534,56 @@ def update_comparable_adjustment(
     comparable.adjustment = adjustment
     comparable.adjusted_price_per_m2 = round(
         comparable.price_per_m2 * (1 + adjustment / 100), 2
+    )
+
+    db.commit()
+    db.refresh(comparable)
+
+    return comparable
+
+
+def update_comparable_fields(
+    db: Session,
+    project_id: int,
+    comparable_id: int,
+    surface: Optional[float] = None,
+    price: Optional[float] = None,
+    price_per_m2: Optional[float] = None,
+    construction_year: Optional[int] = None
+) -> Optional[Comparable]:
+    """
+    Met a jour les champs d'un comparable selectionne (surface, prix, prix/m2, annee).
+    Si price_per_m2 est fourni directement, recalcule price = price_per_m2 * surface.
+    Sinon, recalcule price_per_m2 = price / surface.
+    """
+    comparable = db.query(Comparable).filter(
+        Comparable.id == comparable_id,
+        Comparable.project_id == project_id
+    ).first()
+
+    if not comparable:
+        return None
+
+    if surface is not None:
+        comparable.surface = surface
+    if price is not None:
+        comparable.price = price
+    if construction_year is not None:
+        comparable.construction_year = construction_year
+
+    if price_per_m2 is not None:
+        # L'utilisateur modifie directement le prix/m2 : recalculer le prix total
+        comparable.price_per_m2 = price_per_m2
+        if comparable.surface and comparable.surface > 0:
+            comparable.price = round(price_per_m2 * comparable.surface, 2)
+    else:
+        # Recalculer price_per_m2 a partir de price et surface
+        if comparable.surface and comparable.surface > 0:
+            comparable.price_per_m2 = round(comparable.price / comparable.surface, 2)
+
+    # Recalculer adjusted_price_per_m2 avec l'adjustment existant
+    comparable.adjusted_price_per_m2 = round(
+        comparable.price_per_m2 * (1 + comparable.adjustment / 100), 2
     )
 
     db.commit()

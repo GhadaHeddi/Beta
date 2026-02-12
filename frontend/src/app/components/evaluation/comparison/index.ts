@@ -5,3 +5,4 @@ export { ComparableMapLegend } from './ComparableMapLegend';
 export { ComparisonTable } from './ComparisonTable';
 export { SelectedComparablesList } from './SelectedComparablesList';
 export { ComparisonValidation } from './ComparisonValidation';
+export { QuickAddForm } from './QuickAddForm';

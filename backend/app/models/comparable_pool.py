@@ -21,6 +21,12 @@ class TransactionType(str, Enum):
     RENT = "rent"  # Location
 
 
+class ComparableStatus(str, Enum):
+    """Statut de l'offre comparable"""
+    TRANSACTION = "transaction"  # Bien vendu/loue (transaction realisee)
+    DISPONIBLE = "disponible"    # Offre en cours (disponible)
+
+
 class ComparablePool(Base):
     __tablename__ = "comparable_pool"
 
@@ -50,6 +56,9 @@ class ComparablePool(Base):
     # Source et reference
     source = Column(SQLEnum(ComparableSource, values_callable=lambda e: [x.value for x in e]), nullable=False, index=True)
     source_reference = Column(String, nullable=True)  # ID externe ou reference
+
+    # Statut de l'offre
+    status = Column(String, nullable=False, default="transaction")
 
     # Photo (optionnel)
     photo_url = Column(String, nullable=True)
