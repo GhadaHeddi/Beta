@@ -25,7 +25,7 @@ import type {
   SimulationOutputData,
 } from "@/types/simulation";
 import { DEFAULT_SIMULATION_INPUT } from "@/types/simulation";
-import type { PriceStats } from "@/types/comparable";
+import type { PerimeterStats } from "@/types/comparable";
 import { DEFAULT_COMPARISON_FILTERS } from "@/types/comparable";
 
 interface SimulationStepProps {
@@ -57,7 +57,7 @@ function formatEuro(value: number): string {
 
 export function SimulationStep({ projectId, onStepComplete }: SimulationStepProps) {
   const [simulations, setSimulations] = useState<LocalSimulation[]>([]);
-  const [stats, setStats] = useState<PriceStats | null>(null);
+  const [perimeterStats, setPerimeterStats] = useState<PerimeterStats[] | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -92,7 +92,7 @@ export function SimulationStep({ projectId, onStepComplete }: SimulationStepProp
         }));
 
         setSimulations(localSims);
-        if (searchData) setStats(searchData.stats);
+        if (searchData) setPerimeterStats(searchData.perimeter_stats);
         dataLoadedRef.current = true;
       } catch (err) {
         console.error("Erreur chargement simulations:", err);
@@ -247,7 +247,7 @@ export function SimulationStep({ projectId, onStepComplete }: SimulationStepProp
   return (
     <div className="space-y-6">
       {/* Price Indicators */}
-      <PriceIndicators stats={stats} loading={statsLoading} />
+      <PriceIndicators perimeterStats={perimeterStats} loading={statsLoading} />
 
       {/* Header: new simulation button + save status */}
       <div className="flex items-center justify-between">

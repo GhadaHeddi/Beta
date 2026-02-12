@@ -4,6 +4,7 @@ import { SynthesisTable, computeTotals } from "./analysis/SynthesisTable";
 import { RentalEstimation } from "./analysis/RentalEstimation";
 import { SaleEstimation } from "./analysis/SaleEstimation";
 import { ComparablesSidebar } from "./analysis/ComparablesSidebar";
+import { PriceIndicators } from "./comparison/PriceIndicators";
 import {
   getBreakdowns,
   bulkSaveBreakdowns,
@@ -11,8 +12,10 @@ import {
   saveEstimation,
   getValidatedComparables,
 } from "@/services/analysisService";
+import { searchComparables } from "@/services/projectService";
 import type { PropertyBreakdownInput, MarketEstimation } from "@/types/analysis";
-import type { SelectedComparable } from "@/types/comparable";
+import type { SelectedComparable, PerimeterStats } from "@/types/comparable";
+import { DEFAULT_COMPARISON_FILTERS } from "@/types/comparable";
 
 interface AnalysisStepProps {
   projectId: number;
@@ -37,6 +40,8 @@ export function AnalysisStep({ projectId, onStepComplete, onGoToComparison }: An
   const [rows, setRows] = useState<PropertyBreakdownInput[]>([]);
   const [estimation, setEstimation] = useState<MarketEstimation>(DEFAULT_ESTIMATION);
   const [comparables, setComparables] = useState<SelectedComparable[]>([]);
+  const [perimeterStats, setPerimeterStats] = useState<PerimeterStats[] | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
 
@@ -49,12 +54,16 @@ export function AnalysisStep({ projectId, onStepComplete, onGoToComparison }: An
 
     async function loadData() {
       setLoading(true);
+      setStatsLoading(true);
       try {
-        const [breakdownsData, estimationData, comparablesData] = await Promise.all([
+        const [breakdownsData, estimationData, comparablesData, searchData] = await Promise.all([
           getBreakdowns(projectId).catch(() => []),
           getEstimation(projectId).catch(() => DEFAULT_ESTIMATION),
           getValidatedComparables(projectId).catch(() => []),
+          searchComparables(projectId, DEFAULT_COMPARISON_FILTERS).catch(() => null),
         ]);
+
+        if (searchData) setPerimeterStats(searchData.perimeter_stats);
 
         const mappedRows: PropertyBreakdownInput[] = breakdownsData.map((b) => ({
           id: b.id,
@@ -79,6 +88,7 @@ export function AnalysisStep({ projectId, onStepComplete, onGoToComparison }: An
         console.error("Erreur chargement analyse:", err);
       } finally {
         setLoading(false);
+        setStatsLoading(false);
       }
     }
 
@@ -136,6 +146,9 @@ export function AnalysisStep({ projectId, onStepComplete, onGoToComparison }: An
 
   return (
     <div className="space-y-6">
+      {/* Bandeau d'indicateurs de prix - 3 périmètres */}
+      <PriceIndicators perimeterStats={perimeterStats} loading={statsLoading} />
+
       {/* Indicateur de sauvegarde */}
       <div className="flex justify-end">
         {saveStatus === "saving" && (
