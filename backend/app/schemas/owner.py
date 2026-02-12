@@ -8,6 +8,7 @@ from datetime import datetime
 
 class OwnerCreate(BaseModel):
     name: str
+    contact_name: Optional[str] = None
     address: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
@@ -16,6 +17,7 @@ class OwnerCreate(BaseModel):
 class OwnerResponse(BaseModel):
     id: int
     name: str
+    contact_name: Optional[str] = None
     address: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None

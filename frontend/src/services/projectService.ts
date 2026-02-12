@@ -219,10 +219,12 @@ export interface PropertyInfoData {
   owner_contact?: string;
   occupant_name?: string;
   occupant_contact?: string;
+  property_state?: string;
   construction_year?: number;
   materials?: string;
   total_surface?: number;
   terrain_surface?: number;
+  number_of_floors?: number;
   geographic_sector?: string;
   latitude?: number;
   longitude?: number;
@@ -941,6 +943,7 @@ export async function deleteProjectFile(projectId: number, fileId: number): Prom
 export interface OwnerRecord {
   id: number;
   name: string;
+  contact_name: string | null;
   address: string | null;
   phone: string | null;
   email: string | null;
@@ -949,6 +952,7 @@ export interface OwnerRecord {
 
 export interface OwnerCreateData {
   name: string;
+  contact_name?: string;
   address?: string;
   phone?: string;
   email?: string;
